@@ -28,13 +28,17 @@ class CardinalBSpline(object):
         
         n = self.degree
         d = [self.points[i] for i in xrange(l-n, l+1)]
-        d_start = l-n
+        c = [self.control[i] for i in xrange(l-n, l+1)]
+        c = self.control[l-n:]
         lerp = lambda a, b, x: (1-x)*a + x*b
         for k in xrange(1, n+1):
-            d = [lerp(d[i-1-d_start], d[i-d_start], (x-self.control[i])/(self.control[i+n+1-k] - self.control[i])) for i in xrange(l-n+k, l+1)]
-            d_start = l-n+k
+            d = [lerp(
+                d[i],
+                d[i+1],
+                (x-c[i+k])/(c[i+n+1] - c[i+k]),
+            ) for i in xrange(n-k+1)]
         assert len(d) == 1
-        return d[l-d_start]
+        return d[0]
 
 
 
@@ -43,4 +47,8 @@ from matplotlib import pyplot
 for deg in [0, 1, 2]: #xrange(10):
     bs = CardinalBSpline([1, 2, 3, 6, 5, 6, 7], numpy.linspace(0, 1, 7), deg)
     pyplot.plot(*zip(*[(x, bs.evaluate(x)) for x in numpy.linspace(0, 1, 1000)]))
+#pyplot.figure(2)
+#for deg in [0, 1, 2]: #xrange(10):
+#    bs = CardinalBSpline([1, 2, 3, 6, 5, 6, 7], numpy.linspace(0, 1, 7), deg)
+#    pyplot.plot(*zip(*[(x, bs.evaluate(x)) for x in numpy.linspace(0, 1, 1000)]))
 pyplot.show()
