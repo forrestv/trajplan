@@ -30,15 +30,10 @@ class CardinalBSpline(object):
         d = [self.points[i] for i in xrange(l-n, l+1)]
         c = [self.control[i] for i in xrange(l-n+1, l-n+1+1+2*n-1)]
         lerp = lambda a, b, x: (1-x)*a + x*b
-        for k in xrange(1, n+1):
-            d = [lerp(
-                d[i],
-                d[i+1],
-                (x-c[i+k-1])/(c[i+n] - c[i+k-1]),
-            ) for i in xrange(n-k+1)]
+        for k in xrange(n):
+            d = [lerp(d[i], d[i+1], (x - c[i+k])/(c[i+n] - c[i+k])) for i in xrange(n-k)]
         assert len(d) == 1
         return d[0]
-
 
 
 import numpy
