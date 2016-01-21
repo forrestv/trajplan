@@ -3,32 +3,32 @@ from __future__ import division
 import bisect
 
 class CardinalBSpline(object):
-    def __init__(self, points, control, degree):
+    def __init__(self, points, knots, degree):
         points = list(points)
-        control = map(float, control)
-        #assert len(points) == len(control)
+        knots = map(float, knots)
+        #assert len(points) == len(knots)
         self.points = points
-        self.control = control
+        self.knots = knots
         self.degree = degree
         #for i in xrange(self.degree):
         #    self.points.insert(0, self.points[0])
-        #    self.control.insert(0, self.control[0])
+        #    self.knots.insert(0, self.knots[0])
         #    self.points.append(self.points[-1])
-        #    self.control.append(self.control[-1])
+        #    self.knots.append(self.knots[-1])
     
     def evaluate(self, x):
-        assert x >= self.control[0] and x <= self.control[-1]
-        if x <= self.control[0]+1e-6: x = self.control[0]+1e-6
-        if x >= self.control[-1]-1e-6: x = self.control[-1]-1e-6
+        assert x >= self.knots[0] and x <= self.knots[-1]
+        if x <= self.knots[0]+1e-6: x = self.knots[0]+1e-6
+        if x >= self.knots[-1]-1e-6: x = self.knots[-1]-1e-6
         
-        l = bisect.bisect_right(self.control, x) - 1
-        if l == len(self.control)-1: l -= 1
+        l = bisect.bisect_right(self.knots, x) - 1
+        if l == len(self.knots)-1: l -= 1
         assert l >= 0
-        assert self.control[l] <= x < self.control[l+1]
+        assert self.knots[l] <= x < self.knots[l+1]
         
         n = self.degree
         d = [self.points[i] for i in xrange(l-n, l+1)]
-        c = [self.control[i] for i in xrange(l-n+1, l-n+1+1+2*n-1)]
+        c = [self.knots[i] for i in xrange(l-n+1, l-n+1+1+2*n-1)]
         lerp = lambda a, b, x: (1-x)*a + x*b
         for k in xrange(n):
             d = [lerp(d[i], d[i+1], (x - c[i+k])/(c[i+n] - c[i+k])) for i in xrange(n-k)]
