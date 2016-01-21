@@ -3,19 +3,14 @@ from __future__ import division
 import bisect
 
 class BSpline(object):
-    def __init__(self, points, knots, degree):
+    def __init__(self, points, knots, degree, lerp=lambda a, b, x: (1-x)*a + x*b):
         assert len(knots) == len(points) + degree + 1
         points = list(points)
         knots = map(float, knots)
-        #assert len(points) == len(knots)
         self.points = points
         self.knots = knots
         self.degree = degree
-        #for i in xrange(self.degree):
-        #    self.points.insert(0, self.points[0])
-        #    self.knots.insert(0, self.knots[0])
-        #    self.points.append(self.points[-1])
-        #    self.knots.append(self.knots[-1])
+        self.lerp = lerp
     
     def evaluate(self, x):
         assert x >= self.knots[0] and x <= self.knots[-1]
@@ -28,22 +23,23 @@ class BSpline(object):
         assert self.knots[l] <= x < self.knots[l+1]
         
         n = self.degree
-        print x, l, (l-n+1, l+n), (l-n, l)
         c = [self.knots[i] for i in xrange(l-n+1, l+n+1)]
         d = [self.points[i] for i in xrange(l-n, l+1)]
-        lerp = lambda a, b, x: (1-x)*a + x*b
         for k in xrange(n):
-            d = [lerp(d[i], d[i+1], (x - c[i+k])/(c[i+n] - c[i+k])) for i in xrange(n-k)]
+            d = [self.lerp(d[i], d[i+1], (x - c[i+k])/(c[i+n] - c[i+k])) for i in xrange(n-k)]
         assert len(d) == 1
         return d[0]
-
+    
+    @classmethod
+    def simple(cls, points, degree):
+        DUP = degree-1
+        KNOTDUP = degree
+        knots = [0] * KNOTDUP + map(float, numpy.linspace(0, 1, 2*DUP + len(points) + degree + 1 - 2 * KNOTDUP)) + [1] * KNOTDUP
+        points = [points[0]]*DUP + points + [points[-1]]*DUP
+        return cls(points, knots, degree)
 
 import numpy
 from matplotlib import pyplot
-bs = BSpline([0, 0, 0, 6, 0, 0, 0], [-2, -2, -2, -2, -1, 0, 1, 2, 2, 2, 2], 3)
-pyplot.plot(*zip(*[(x, bs.evaluate(x)) for x in numpy.linspace(-2, 2, 100)]))
-#pyplot.figure(2)
-#for deg in [0, 1, 2]: #xrange(10):
-#    bs = BSpline([1, 2, 3, 6, 5, 6, 7], numpy.linspace(0, 1, 7), deg)
-#    pyplot.plot(*zip(*[(x, bs.evaluate(x)) for x in numpy.linspace(0, 1, 1000)]))
+bs = BSpline.simple([0, 1, 1, 0], 2)
+pyplot.plot(*zip(*[(x, bs.evaluate(x)) for x in numpy.linspace(0, 1, 100)]))
 pyplot.show()
