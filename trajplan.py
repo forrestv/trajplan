@@ -4,6 +4,7 @@ import bisect
 
 class BSpline(object):
     def __init__(self, points, knots, degree):
+        assert len(knots) == len(points) + degree + 1
         points = list(points)
         knots = map(float, knots)
         #assert len(points) == len(knots)
