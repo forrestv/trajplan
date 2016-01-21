@@ -37,9 +37,21 @@ class BSpline(object):
         knots = [0] * KNOTDUP + map(float, numpy.linspace(0, 1, 2*DUP + len(points) + degree + 1 - 2 * KNOTDUP)) + [1] * KNOTDUP
         points = [points[0]]*DUP + points + [points[-1]]*DUP
         return cls(points, knots, degree)
+    
+    @classmethod
+    def simple2(cls, points, degree):
+        points = list(points)
+        start, end = points[0], points[-1]
+        points = points[1:-1]
+        DUP = degree-1
+        KNOTDUP = degree
+        assert DUP >= 1
+        knots = [0] * KNOTDUP + map(float, numpy.linspace(0, 1, 2*DUP + len(points) + degree + 1 - 2 * KNOTDUP)) + [1] * KNOTDUP
+        points = [start]*DUP + points + [end]*DUP
+        return cls(points, knots, degree)
 
 import numpy
 from matplotlib import pyplot
-bs = BSpline.simple([0, 1, 1, 0], 2)
+bs = BSpline.simple2([0, 2, 1, 3], 2)
 pyplot.plot(*zip(*[(x, bs.evaluate(x)) for x in numpy.linspace(0, 1, 100)]))
 pyplot.show()
