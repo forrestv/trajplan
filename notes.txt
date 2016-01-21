@@ -1,0 +1,34 @@
+inputs:
+p(s) is position (and maybe orientation too) as a function of s ∈ [0, 1]
+w(p, v) is force (and maybe moment too) exerted on vehicle as a function of position and velocity
+
+outputs:
+t(s) is time as a function of s ∈ [0, 1]
+
+---
+
+v(s) = dp(s)/dt
+     = p'(s) / t'(s)
+
+a(s) = d2p(s)/dt2
+     = p''(s) / t'(s)2 - p'(s) t''(s) / t'(s)3
+     = d2p/ds2 / (dt/ds)2 - dp/ds d2t/ds2 / (dt/ds)3
+
+---
+
+v(s) = dp(s)/dt
+     = p'(s)  s'(t)
+
+a(s) = d2p(s)/dt2
+     = p''(s) s'(t)2 + p'(s) s''(t)
+     = p''(s) ds/dt(s)2 + p'(s) d2s/dt2(s)
+     = d2p/ds2 (ds/dt)2 + dp/ds d2s/dt2
+
+m a = w(p, v) + u
+m (d2p/ds2 (ds/dt)2 + dp/ds d2s/dt2) = w(p, dp/ds ds/dt) + u
+u = m (d2p/ds2 (ds/dt)2 + dp/ds d2s/dt2) - w(p, dp/ds ds/dt)
+u = m d2p/ds2 (ds/dt)2 + m dp/ds d2s/dt2 - w0 - w1 dp/ds ds/dt
+u = d2s/dt2 (m dp/ds) + (ds/dt)2 (m d2p/ds2) - ds/dt (w1 dp/ds) - w0
+
+find maximum pseudospeed (ds/dt) such that all slower pseudospeeds are allowable
+     at that maximum pseudospeed, there will only be one allowable pseudoacceleration (d2p/ds2)
