@@ -2,7 +2,7 @@ from __future__ import division
 
 import bisect
 
-class CardinalBSpline(object):
+class BSpline(object):
     def __init__(self, points, knots, degree):
         points = list(points)
         knots = map(float, knots)
@@ -27,8 +27,9 @@ class CardinalBSpline(object):
         assert self.knots[l] <= x < self.knots[l+1]
         
         n = self.degree
+        print x, l, (l-n+1, l+n), (l-n, l)
+        c = [self.knots[i] for i in xrange(l-n+1, l+n+1)]
         d = [self.points[i] for i in xrange(l-n, l+1)]
-        c = [self.knots[i] for i in xrange(l-n+1, l-n+1+1+2*n-1)]
         lerp = lambda a, b, x: (1-x)*a + x*b
         for k in xrange(n):
             d = [lerp(d[i], d[i+1], (x - c[i+k])/(c[i+n] - c[i+k])) for i in xrange(n-k)]
@@ -38,10 +39,10 @@ class CardinalBSpline(object):
 
 import numpy
 from matplotlib import pyplot
-bs = CardinalBSpline([0, 0, 0, 6, 0, 0, 0], [-2, -2, -2, -2, -1, 0, 1, 2, 2, 2, 2], 3)
-pyplot.plot(*zip(*[(x, bs.evaluate(x)) for x in numpy.linspace(-2, 2, 1000)]))
+bs = BSpline([0, 0, 0, 6, 0, 0, 0], [-2, -2, -2, -2, -1, 0, 1, 2, 2, 2, 2], 3)
+pyplot.plot(*zip(*[(x, bs.evaluate(x)) for x in numpy.linspace(-2, 2, 100)]))
 #pyplot.figure(2)
 #for deg in [0, 1, 2]: #xrange(10):
-#    bs = CardinalBSpline([1, 2, 3, 6, 5, 6, 7], numpy.linspace(0, 1, 7), deg)
+#    bs = BSpline([1, 2, 3, 6, 5, 6, 7], numpy.linspace(0, 1, 7), deg)
 #    pyplot.plot(*zip(*[(x, bs.evaluate(x)) for x in numpy.linspace(0, 1, 1000)]))
 pyplot.show()
