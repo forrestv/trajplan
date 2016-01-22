@@ -32,14 +32,19 @@ class BSpline(object):
     
     @classmethod
     def simple(cls, points, degree):
+        # produces a spline that starts and ends at the first and last points,
+        # at which it has C^degree continuity to a constant
         DUP = degree-1
         KNOTDUP = degree
+        assert DUP >= 0
         knots = [0] * KNOTDUP + map(float, numpy.linspace(0, 1, 2*DUP + len(points) + degree + 1 - 2 * KNOTDUP)) + [1] * KNOTDUP
         points = [points[0]]*DUP + points + [points[-1]]*DUP
         return cls(points, knots, degree)
     
     @classmethod
     def simple2(cls, points, degree):
+        # produces a spline that starts and ends at the first and last points,
+        # at which it has C^(degree-1) continuity to a constant
         points = list(points)
         start, end = points[0], points[-1]
         points = points[1:-1]
@@ -52,6 +57,11 @@ class BSpline(object):
 
 import numpy
 from matplotlib import pyplot
-bs = BSpline.simple2([0, 2, 1, 3], 2)
-pyplot.plot(*zip(*[(x, bs.evaluate(x)) for x in numpy.linspace(0, 1, 100)]))
+a = lambda *x: numpy.array(list(x))
+import math
+N = 20
+points = [a(math.cos(i/N*math.pi), math.sin(i/N*math.pi))+numpy.random.randn(2)*.04 for i in xrange(N+1)]
+bs = BSpline.simple2(points, 2)
+pyplot.plot(*zip(*[bs.evaluate(x) for x in numpy.linspace(0, 1, 1000)]))
+pyplot.scatter(*zip(*points))
 pyplot.show()
