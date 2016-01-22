@@ -56,12 +56,24 @@ class BSpline(object):
         return cls(points, knots, degree)
 
 import numpy
-from matplotlib import pyplot
+from matplotlib import pyplot, animation
 a = lambda *x: numpy.array(list(x))
 import math
 N = 20
 points = [a(math.cos(i/N*math.pi), math.sin(i/N*math.pi))+numpy.random.randn(2)*.04 for i in xrange(N+1)]
 bs = BSpline.simple2(points, 2)
-pyplot.plot(*zip(*[bs.evaluate(x) for x in numpy.linspace(0, 1, 1000)]))
-pyplot.scatter(*zip(*points))
+
+px = [bs.evaluate(x) for x in numpy.linspace(0, 1, 1000)]
+
+def animate(i):
+    pyplot.cla()
+    pyplot.plot(*zip(*px))
+    import time
+    t = time.time() % 10 / 10
+    pyplot.scatter(*zip(*[bs.evaluate(t)]))
+
+fig = pyplot.figure()
+
+ani = animation.FuncAnimation(fig, animate, interval=25)
+
 pyplot.show()
