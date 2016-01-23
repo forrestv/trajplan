@@ -83,12 +83,11 @@ def mylerp(a, b, x, dxdt):
 
 bs = BSpline.simple2(points, 2, lerp=mylerp)
 
+spline_view_points = [bs.evaluate(x)['p'] for x in numpy.linspace(0, 1, 1000)]
 if 0:
-    px = [bs.evaluate(x)['p'] for x in numpy.linspace(0, 1, 1000)]
-
     def animate(i):
         pyplot.cla()
-        pyplot.plot(*zip(*px))
+        pyplot.plot(*zip(*spline_view_points))
         import time
         t = time.time() % 10 / 10
         res = bs.evaluate(t)
@@ -229,21 +228,97 @@ else:
             else:
                 assert can_stop_from(advance((s, ds_over_dt), rng[0], ds), ds)
                 chosen = rng[0]
-            px3.append((s, chosen))
+            px3.append((s+ds/2, chosen))
             s, ds_over_dt = advance((s, ds_over_dt), chosen, ds)
         
         t = 0
         ts = [(0, t)]
         for (s1, ds_over_dt1), (s2, ds_over_dt2) in zip(res[:-1], res[1:]):
+            # circular integration..!
+            # find new_t such that a circle that goes (s1, t) and (s2, new_t)
+            # while respecting the slope conditions at each point.
+            # avoids divide by zero that arises from standard integration.
+            # consequences of inventing new math: unknown.
             t = t + (s2 - s1) * (1 - ds_over_dt1*ds_over_dt2 + math.sqrt((1+ds_over_dt1**2)*(1+ds_over_dt2**2)))/(ds_over_dt1+ds_over_dt2)
             ts.append((s2, t))
         
-        pyplot.plot(*zip(*ts))
-        
-        pyplot.plot(*zip(*px))
-        #pyplot.plot(*zip(*px1))
-        #pyplot.plot(*zip(*px2))
-        #pyplot.plot(*zip(*px3))
-        px = [(x, find_maximum_ds_over_dt(x)) for x in numpy.linspace(0, 1, N)]
-        pyplot.plot(*zip(*px))
-        pyplot.show()
+        if 0:
+            pyplot.plot(*zip(*ts))
+            
+            pyplot.plot(*zip(*px))
+            #pyplot.plot(*zip(*px1))
+            #pyplot.plot(*zip(*px2))
+            #pyplot.plot(*zip(*px3))
+            px = [(x, find_maximum_ds_over_dt(x)) for x in numpy.linspace(0, 1, N)]
+            pyplot.plot(*zip(*px))
+            pyplot.show()
+        else:
+            res2 = []
+            s = 0
+            last_s = None
+            for i in xrange(N):
+                if s > 1:
+                    s2 = 1
+                    assert i == N-1
+                else:
+                    s2 = s
+                speval = bs.evaluate(s2)
+                assert ts[i][0] == s
+                t = ts[i][1]
+                assert res[i][0] == s
+                ds_over_dt = res[i][1]
+                if i == 0:
+                    left_d2s_over_dt2 = 0
+                    assert px3[i][0] == s+ds/2
+                    right_d2s_over_dt2 = px3[i][1]
+                elif i == N-1:
+                    assert px3[i-1][0] == last_s+ds/2
+                    left_d2s_over_dt2 = px3[i-1][1]
+                    right_d2s_over_dt2 = 0
+                else:
+                    assert px3[i-1][0] == last_s+ds/2
+                    left_d2s_over_dt2 = px3[i-1][1]
+                    assert px3[i][0] == s+ds/2
+                    right_d2s_over_dt2 = px3[i][1]
+                d2s_over_dt2 = (left_d2s_over_dt2 + right_d2s_over_dt2)/2
+                d2s_over_dt2 = right_d2s_over_dt2
+                p = speval['p']
+                v = speval['v'] * ds_over_dt
+                a = speval['a'] * ds_over_dt**2 + speval['v'] * d2s_over_dt2
+                res2.append(dict(
+                    s=s,
+                    t=t,
+                    ds_over_dt=ds_over_dt,
+                    d2s_over_dt2=d2s_over_dt2,
+                    p=p,
+                    v=v,
+                    a=a,
+                    u=m*a - w(p, v),
+                ))
+                last_s = s
+                s += ds
+            
+            if 0:
+                pyplot.plot(*zip(*[(x['t'], x['u'][0]) for x in res2]))
+                pyplot.plot(*zip(*[(x['t'], x['u'][1]) for x in res2]))
+                pyplot.show()
+            else:
+                def animate(i):
+                    pyplot.cla()
+                    pyplot.gca().set_aspect('equal')
+                    pyplot.plot(*zip(*spline_view_points))
+                    pyplot.scatter(*zip(*points))
+                    import time
+                    t = time.time() % res2[-1]['t']
+                    i = min(xrange(N), key=lambda i: abs(res2[i]['t'] - t))
+                    inst = res2[i]
+                    pyplot.scatter(*zip(*[inst['p']]) + [80])
+                    #pyplot.arrow(*(list(inst['p']) + list(.1*inst['v'])))
+                    pyplot.arrow(*(list(inst['p']) + list(.1*inst['u'])))
+                    pyplot.plot(*zip(*[inst['p'] + .1*numpy.array(x) for x in [(-1, -1), (-1, 1), (1, 1), (1, -1), (-1, -1)]]))
+
+                fig = pyplot.figure()
+
+                ani = animation.FuncAnimation(fig, animate, interval=25)
+
+                pyplot.show()
