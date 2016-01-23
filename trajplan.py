@@ -168,24 +168,47 @@ else:
         #print breakpoint_range
         return breakpoint_range[0]
     
+    def advance((s, ds_over_dt), d2s_over_dt2, ds):
+        if ds_over_dt**2 + 2 * ds * d2s_over_dt2 <= 0:
+            ds_over_dt = 0
+        else:
+            ds_over_dt = math.sqrt(ds_over_dt**2 + 2 * ds * d2s_over_dt2)
+        return s + ds, ds_over_dt
+    
+    def can_stop_from((s, ds_over_dt), ds):
+        while True:
+            if ds_over_dt == 0: return True
+            if s >= 1: return False
+            rng = get_allowable_d2s_over_dt2_range(s, ds_over_dt)
+            if not range_is_valid(rng): return False
+            s, ds_over_dt = advance((s, ds_over_dt), rng[0], ds)
+    
     N = 1001
     px = []
     px1 = []
     px2 = []
+    px3 = []
     ds_over_dt = 0
     for s, s2 in zip(numpy.linspace(0, 1, N)[:-1], numpy.linspace(0, 1, N)[1:]):
-        print s, ds_over_dt
-        px.append((s, ds_over_dt))
         rng = get_allowable_d2s_over_dt2_range(s, ds_over_dt)
+        ds = 1/(N-1)
+        print s, ds_over_dt, can_stop_from(advance((s, ds_over_dt), rng[1], ds), ds)
+        px.append((s, ds_over_dt))
         px1.append((s, rng[0]))
         px2.append((s, rng[1]))
         if not range_is_valid(rng): break
-        chosen = rng[1]
-        ds_over_dt = math.sqrt(ds_over_dt**2 + 2 * (s2 - s) * chosen)
+        if can_stop_from(advance((s, ds_over_dt), rng[1], ds), ds):
+            chosen = rng[1]
+        else:
+            assert can_stop_from(advance((s, ds_over_dt), rng[0], ds), ds)
+            chosen = rng[0]
+        px2.append((s, chosen))
+        _, ds_over_dt = advance((s, ds_over_dt), chosen, ds)
     
     pyplot.plot(*zip(*px))
     pyplot.plot(*zip(*px1))
     pyplot.plot(*zip(*px2))
+    pyplot.plot(*zip(*px3))
     px = [(x, find_maximum_ds_over_dt(x)) for x in numpy.linspace(0, 1, N)]
     pyplot.plot(*zip(*px))
     pyplot.show()
