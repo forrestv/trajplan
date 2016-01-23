@@ -94,7 +94,8 @@ def animate(i):
     import time
     t = time.time() % 10 / 10
     res = bs.evaluate(t)
-    pyplot.scatter(*zip(*[res['p']]))
+    pyplot.scatter(*zip(*points))
+    pyplot.scatter(*zip(*[res['p']]) + [80])
     pyplot.arrow(*(list(res['p']) + list(.1*res['v'])))
     pyplot.arrow(*(list(res['p']) + list(.003*res['a'])))
 
