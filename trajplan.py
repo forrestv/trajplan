@@ -42,25 +42,13 @@ class BSpline(object):
         return cls(points, knots, degree, **kwargs)
     
     @classmethod
-    def simple2(cls, points, degree, **kwargs):
-        assert degree == 2
+    def simple_nostop(cls, points, degree, **kwargs):
         # produces a spline that starts and ends at the first and last points,
-        # at which it has C^(degree-1) continuity to a constant
+        # at which it has only C^1 continuity to a constant
         DUP = degree-1
         KNOTDUP = degree
         assert DUP >= 1
-        knots = [0] * KNOTDUP + map(float, numpy.linspace(0, 1, 2*DUP + (len(points) - 2) + degree + 1 - 2 * KNOTDUP)) + [1] * KNOTDUP
-        return cls(points, knots, degree, **kwargs)
-    
-    @classmethod
-    def simple3(cls, points, degree, **kwargs):
-        assert degree == 3
-        # produces a spline that starts and ends at the first and last points,
-        # at which it has C^(degree-1) continuity to a constant
-        DUP = degree-1
-        KNOTDUP = degree
-        assert DUP >= 1
-        knots = [0] * KNOTDUP + map(float, numpy.linspace(0, 1, 2*DUP + (len(points) - 4) + degree + 1 - 2 * KNOTDUP)) + [1] * KNOTDUP
+        knots = [0] * KNOTDUP + map(float, numpy.linspace(0, 1, 2*DUP + (len(points) - (2*(degree-1))) + degree + 1 - 2 * KNOTDUP)) + [1] * KNOTDUP
         return cls(points, knots, degree, **kwargs)
 
 import numpy
@@ -89,7 +77,7 @@ def mylerp(a, b, x, dxdt):
         a=((1-x)*a['a'] + x*b['a']) + (b['v'] - a['v'])*dxdt + (b['v'] - a['v'])*dxdt,
     )
 
-bs = BSpline.simple3(points, 3, lerp=mylerp)
+bs = BSpline.simple_nostop(points, 2, lerp=mylerp)
 
 spline_view_points = [bs.evaluate(x)['p'] for x in numpy.linspace(0, 1, 1000)]
 if 0:
