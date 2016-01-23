@@ -3,7 +3,7 @@ from __future__ import division
 import bisect
 
 class BSpline(object):
-    def __init__(self, points, knots, degree, lerp=lambda a, b, x: (1-x)*a + x*b):
+    def __init__(self, points, knots, degree, lerp=lambda a, b, x, dxdt: (1-x)*a + x*b):
         assert len(knots) == len(points) + degree + 1
         points = list(points)
         knots = map(float, knots)
@@ -26,7 +26,7 @@ class BSpline(object):
         c = [self.knots[i] for i in xrange(l-n+1, l+n+1)]
         d = [self.points[i] for i in xrange(l-n, l+1)]
         for k in xrange(n):
-            d = [self.lerp(d[i], d[i+1], (x - c[i+k])/(c[i+n] - c[i+k])) for i in xrange(n-k)]
+            d = [self.lerp(d[i], d[i+1], (x - c[i+k])/(c[i+n] - c[i+k]), 1/(c[i+n] - c[i+k])) for i in xrange(n-k)]
         assert len(d) == 1
         return d[0]
     
@@ -63,7 +63,7 @@ import math
 N = 20
 points = [a(math.cos(i/N*math.pi), math.sin(i/N*math.pi))+numpy.random.randn(2)*.04 for i in xrange(N+1)]
 
-def mylerp(a, b, x):
+def mylerp(a, b, x, dxdt):
     if not isinstance(a, dict):
         a = dict(
             p=a,
@@ -77,7 +77,8 @@ def mylerp(a, b, x):
         )
     return dict(
         p=(1-x)*a['p'] + x*b['p'],
-        v=((1-x)*a['v'] + x*b['v']) + (b['p'] - a['p']),
+        v=((1-x)*a['v'] + x*b['v']) + (b['p'] - a['p'])*dxdt,
+        a=((1-x)*a['a'] + x*b['a']) + (b['v'] - a['v'])*dxdt + (b['v'] - a['v'])*dxdt,
     )
 
 bs = BSpline.simple2(points, 2, lerp=mylerp)
@@ -94,8 +95,8 @@ def animate(i):
     t = time.time() % 10 / 10
     res = bs.evaluate(t)
     pyplot.scatter(*zip(*[res['p']]))
-    print zip(*[list(res['p']) + list(res['v'])])
-    pyplot.arrow(*(list(res['p']) + list(res['v'])))
+    pyplot.arrow(*(list(res['p']) + list(.1*res['v'])))
+    pyplot.arrow(*(list(res['p']) + list(.003*res['a'])))
 
 fig = pyplot.figure()
 
