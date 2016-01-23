@@ -31,7 +31,7 @@ class BSpline(object):
         return d[0]
     
     @classmethod
-    def simple(cls, points, degree):
+    def simple(cls, points, degree, **kwargs):
         # produces a spline that starts and ends at the first and last points,
         # at which it has C^degree continuity to a constant
         DUP = degree-1
@@ -39,10 +39,10 @@ class BSpline(object):
         assert DUP >= 0
         knots = [0] * KNOTDUP + map(float, numpy.linspace(0, 1, 2*DUP + len(points) + degree + 1 - 2 * KNOTDUP)) + [1] * KNOTDUP
         points = [points[0]]*DUP + points + [points[-1]]*DUP
-        return cls(points, knots, degree)
+        return cls(points, knots, degree, **kwargs)
     
     @classmethod
-    def simple2(cls, points, degree):
+    def simple2(cls, points, degree, **kwargs):
         # produces a spline that starts and ends at the first and last points,
         # at which it has C^(degree-1) continuity to a constant
         points = list(points)
@@ -53,24 +53,49 @@ class BSpline(object):
         assert DUP >= 1
         knots = [0] * KNOTDUP + map(float, numpy.linspace(0, 1, 2*DUP + len(points) + degree + 1 - 2 * KNOTDUP)) + [1] * KNOTDUP
         points = [start]*DUP + points + [end]*DUP
-        return cls(points, knots, degree)
+        return cls(points, knots, degree, **kwargs)
 
 import numpy
 from matplotlib import pyplot, animation
 a = lambda *x: numpy.array(list(x))
 import math
+
 N = 20
 points = [a(math.cos(i/N*math.pi), math.sin(i/N*math.pi))+numpy.random.randn(2)*.04 for i in xrange(N+1)]
-bs = BSpline.simple2(points, 2)
 
-px = [bs.evaluate(x) for x in numpy.linspace(0, 1, 1000)]
+def mylerp(a, b, x):
+    if not isinstance(a, dict):
+        a = dict(
+            p=a,
+            v=numpy.array([0, 0]),
+            a=numpy.array([0, 0]),
+        )
+        b = dict(
+            p=b,
+            v=numpy.array([0, 0]),
+            a=numpy.array([0, 0]),
+        )
+    return dict(
+        p=(1-x)*a['p'] + x*b['p'],
+        v=((1-x)*a['v'] + x*b['v']) + (b['p'] - a['p']),
+    )
+
+bs = BSpline.simple2(points, 2, lerp=mylerp)
+
+def w(p, v):
+    return -v
+
+px = [bs.evaluate(x)['p'] for x in numpy.linspace(0, 1, 1000)]
 
 def animate(i):
     pyplot.cla()
     pyplot.plot(*zip(*px))
     import time
     t = time.time() % 10 / 10
-    pyplot.scatter(*zip(*[bs.evaluate(t)]))
+    res = bs.evaluate(t)
+    pyplot.scatter(*zip(*[res['p']]))
+    print zip(*[list(res['p']) + list(res['v'])])
+    pyplot.arrow(*(list(res['p']) + list(res['v'])))
 
 fig = pyplot.figure()
 

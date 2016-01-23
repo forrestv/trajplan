@@ -7,6 +7,14 @@ t(s) is time as a function of s ∈ [0, 1]
 
 ---
 
+steps
+
+find
+
+
+
+---
+
 v(s) = dp(s)/dt
      = p'(s) / t'(s)
 
@@ -32,3 +40,15 @@ u = d2s/dt2 (m dp/ds) + (ds/dt)2 (m d2p/ds2) - ds/dt (w1 dp/ds) - w0
 
 find maximum pseudospeed (ds/dt) such that all slower pseudospeeds are allowable
      at that maximum pseudospeed, there will only be one allowable pseudoacceleration (d2p/ds2)
+
+
+drag function
+------------
+
+for each axis:
+
+xAx^T + bx + c
+
+A has 21
+b has 6
+c is known(ish)
