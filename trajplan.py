@@ -131,29 +131,17 @@ def get_allowable_d2s_over_dt2_range(s, ds_over_dt):
         allowed = intersect_ranges(allowed, this_allowed)
     return allowed
 
-def find_maximum_ds_over_dt(s):
-    assert range_is_valid(get_allowable_d2s_over_dt2_range(s, 0))
-    a = 1
-    while range_is_valid(get_allowable_d2s_over_dt2_range(s, a)):
-        a *= 2
-    # a is invalid
-    # breakpoint is in (0, a]; binary search to find it
-    breakpoint_range = 0, a
-    for i in xrange(20):
-        if range_is_valid(get_allowable_d2s_over_dt2_range(s, (breakpoint_range[0] + breakpoint_range[1])/2)):
-            breakpoint_range = (breakpoint_range[0] + breakpoint_range[1])/2, breakpoint_range[1]
-        else:
-            breakpoint_range = breakpoint_range[0], (breakpoint_range[0] + breakpoint_range[1])/2
-    #print breakpoint_range
-    return breakpoint_range[0]
-
 def advance((s, ds_over_dt), d2s_over_dt2, ds):
-    # advance
+    # advance state over step of length ds with constant pseudoacceleration d2s_over_dt2
+    # if pseudoacceleration would make our pseudospeed < 0, the pseudospeed is
+    #     limited to exactly 0 and we return the pseudoacceleration
+    #     that was needed to achieve that
     if ds_over_dt**2 + 2 * ds * d2s_over_dt2 <= 0:
         ds_over_dt = 0
+        d2s_over_dt2 = -ds_over_dt**2 / 2 / ds
     else:
         ds_over_dt = math.sqrt(ds_over_dt**2 + 2 * ds * d2s_over_dt2)
-    return s + ds, ds_over_dt
+    return (s + ds, ds_over_dt), d2s_over_dt2
 
 def can_stop_from((s, ds_over_dt), ds):
     while True:
@@ -161,66 +149,62 @@ def can_stop_from((s, ds_over_dt), ds):
         if s >= 1: return False
         rng = get_allowable_d2s_over_dt2_range(s, ds_over_dt)
         if not range_is_valid(rng): return False
-        s, ds_over_dt = advance((s, ds_over_dt), rng[0], ds)
+        s, ds_over_dt = advance((s, ds_over_dt), rng[0], ds)[0]
 
 N = 1001
-
-px3 = []
-ds_over_dt = 0
-s = 0
 ds = 1/(N-1)
-res = []
+
+s = 0
+ds_over_dt = 0
+d2s_over_dt2_values = []
+ds_over_dt_values = []
 while True:
-    res.append((s, ds_over_dt))
+    ds_over_dt_values.append((s, ds_over_dt))
     print s, ds_over_dt,
     if s != 0 and ds_over_dt == 0:
         print
         break
     rng = get_allowable_d2s_over_dt2_range(s, ds_over_dt)
-    print can_stop_from(advance((s, ds_over_dt), rng[1], ds), ds)
-    if not range_is_valid(rng): break
-    if can_stop_from(advance((s, ds_over_dt), rng[1], ds), ds):
+    can_stop = can_stop_from(advance((s, ds_over_dt), rng[1], ds)[0], ds)
+    print can_stop
+    assert range_is_valid(rng)
+    if can_stop:
         chosen = rng[1]
     else:
-        assert can_stop_from(advance((s, ds_over_dt), rng[0], ds), ds)
+        #assert can_stop_from(advance((s, ds_over_dt), rng[0], ds)[0], ds) # this should hold, but evaluating it is slow
         chosen = rng[0]
-    px3.append((s+ds/2, chosen))
-    s, ds_over_dt = advance((s, ds_over_dt), chosen, ds)
+    old_s = s
+    (s, ds_over_dt), chosen = advance((s, ds_over_dt), chosen, ds)
+    d2s_over_dt2_values.append((old_s+ds/2, chosen))
 
 t = 0
-ts = [(0, t)]
-for (s1, ds_over_dt1), (s2, ds_over_dt2) in zip(res[:-1], res[1:]):
+t_values = [(0, t)]
+for (s1, ds_over_dt1), (s2, ds_over_dt2) in zip(ds_over_dt_values[:-1], ds_over_dt_values[1:]):
     # circular integration..!
     # find new_t such that a circle that goes (s1, t) and (s2, new_t)
     # while respecting the slope conditions at each point.
     # avoids divide by zero that arises from standard integration.
     # consequences of inventing new math: unknown.
     t = t + (s2 - s1) * (1 - ds_over_dt1*ds_over_dt2 + math.sqrt((1+ds_over_dt1**2)*(1+ds_over_dt2**2)))/(ds_over_dt1+ds_over_dt2)
-    ts.append((s2, t))
+    t_values.append((s2, t))
 
-res2 = []
 s = 0
-last_s = None
+result = []
 for i in xrange(N):
-    if s > 1:
-        s2 = 1
-        assert i == N-1
-    else:
-        s2 = s
-    speval = bs.evaluate(s2)
-    assert ts[i][0] == s
-    t = ts[i][1]
-    assert res[i][0] == s
-    ds_over_dt = res[i][1]
+    speval = bs.evaluate(min(1, s))
+    assert t_values[i][0] == s
+    t = t_values[i][1]
+    assert ds_over_dt_values[i][0] == s
+    ds_over_dt = ds_over_dt_values[i][1]
     if i == N-1:
         d2s_over_dt2 = 0
     else:
-        assert px3[i][0] == s+ds/2
-        d2s_over_dt2 = px3[i][1]
+        assert d2s_over_dt2_values[i][0] == s+ds/2
+        d2s_over_dt2 = d2s_over_dt2_values[i][1]
     p = speval['p']
     v = speval['v'] * ds_over_dt
     a = speval['a'] * ds_over_dt**2 + speval['v'] * d2s_over_dt2
-    res2.append(dict(
+    result.append(dict(
         s=s,
         t=t,
         ds_over_dt=ds_over_dt,
@@ -230,12 +214,11 @@ for i in xrange(N):
         a=a,
         u=m*a - w(p, v),
     ))
-    last_s = s
     s += ds
 
 if 0:
-    pyplot.plot(*zip(*[(x['t'], x['u'][0]) for x in res2]))
-    pyplot.plot(*zip(*[(x['t'], x['u'][1]) for x in res2]))
+    pyplot.plot(*zip(*[(x['t'], x['u'][0]) for x in result]))
+    pyplot.plot(*zip(*[(x['t'], x['u'][1]) for x in result]))
     pyplot.show()
 else:
     spline_sampled_points = [bs.evaluate(x)['p'] for x in numpy.linspace(0, 1, 1000)]
@@ -245,9 +228,9 @@ else:
         pyplot.plot(*zip(*spline_sampled_points))
         pyplot.scatter(*zip(*spline_control_points))
         import time
-        t = time.time() % res2[-1]['t']
-        i = min(xrange(N), key=lambda i: abs(res2[i]['t'] - t))
-        inst = res2[i]
+        t = time.time() % result[-1]['t']
+        i = min(xrange(N), key=lambda i: abs(result[i]['t'] - t))
+        inst = result[i]
         pyplot.scatter(*zip(*[inst['p']]) + [80])
         #pyplot.arrow(*(list(inst['p']) + list(.1*inst['v'])))
         pyplot.arrow(*(list(inst['p']) + list(.1*inst['u'])))
