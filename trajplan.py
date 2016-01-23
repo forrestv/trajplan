@@ -211,13 +211,18 @@ else:
         ds_over_dt = 0
         s = 0
         ds = 1/(N-1)
+        res = []
         while True:
             px.append((s, ds_over_dt))
-            if s != 0 and ds_over_dt == 0: break
+            res.append((s, ds_over_dt))
+            print s, ds_over_dt,
+            if s != 0 and ds_over_dt == 0:
+                print
+                break
             rng = get_allowable_d2s_over_dt2_range(s, ds_over_dt)
             px1.append((s, rng[0]))
             px2.append((s, rng[1]))
-            print s, ds_over_dt, can_stop_from(advance((s, ds_over_dt), rng[1], ds), ds)
+            print can_stop_from(advance((s, ds_over_dt), rng[1], ds), ds)
             if not range_is_valid(rng): break
             if can_stop_from(advance((s, ds_over_dt), rng[1], ds), ds):
                 chosen = rng[1]
@@ -226,6 +231,14 @@ else:
                 chosen = rng[0]
             px3.append((s, chosen))
             s, ds_over_dt = advance((s, ds_over_dt), chosen, ds)
+        
+        t = 0
+        ts = [(0, t)]
+        for (s1, ds_over_dt1), (s2, ds_over_dt2) in zip(res[:-1], res[1:]):
+            t = t + (s2 - s1) * (1 - ds_over_dt1*ds_over_dt2 + math.sqrt((1+ds_over_dt1**2)*(1+ds_over_dt2**2)))/(ds_over_dt1+ds_over_dt2)
+            ts.append((s2, t))
+        
+        pyplot.plot(*zip(*ts))
         
         pyplot.plot(*zip(*px))
         #pyplot.plot(*zip(*px1))
