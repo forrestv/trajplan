@@ -22,6 +22,11 @@ a(s) = d2p(s)/dt2
      = p''(s) / t'(s)2 - p'(s) t''(s) / t'(s)3
      = d2p/ds2 / (dt/ds)2 - dp/ds d2t/ds2 / (dt/ds)3
 
+dt/ds
+integrate naturally
+want to minimize
+
+
 ---
 
 v(s) = dp(s)/dt
@@ -31,6 +36,9 @@ a(s) = d2p(s)/dt2
      = p''(s) s'(t)2 + p'(s) s''(t)
      = p''(s) ds/dt(s)2 + p'(s) d2s/dt2(s)
      = d2p/ds2 (ds/dt)2 + dp/ds d2s/dt2
+
+ds/dt
+want to maximize
 
 m a = w(p, v) + u
 m (d2p/ds2 (ds/dt)2 + dp/ds d2s/dt2) = w(p, dp/ds ds/dt) + u

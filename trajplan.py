@@ -83,24 +83,128 @@ def mylerp(a, b, x, dxdt):
 
 bs = BSpline.simple2(points, 2, lerp=mylerp)
 
-def w(p, v):
-    return -v
+if 0:
+    px = [bs.evaluate(x)['p'] for x in numpy.linspace(0, 1, 1000)]
 
-px = [bs.evaluate(x)['p'] for x in numpy.linspace(0, 1, 1000)]
+    def animate(i):
+        pyplot.cla()
+        pyplot.plot(*zip(*px))
+        import time
+        t = time.time() % 10 / 10
+        res = bs.evaluate(t)
+        pyplot.scatter(*zip(*points))
+        pyplot.scatter(*zip(*[res['p']]) + [80])
+        pyplot.arrow(*(list(res['p']) + list(.1*res['v'])))
+        pyplot.arrow(*(list(res['p']) + list(.003*res['a'])))
 
-def animate(i):
-    pyplot.cla()
+    fig = pyplot.figure()
+
+    ani = animation.FuncAnimation(fig, animate, interval=25)
+
+    pyplot.show()
+
+else:
+    inf = 1e1000
+    
+    def w(p, v):
+        return -v
+    m = 1
+    
+    def line_halfspace_intersection(line_start, line_dir, halfspace_normal, halfspace_dist):
+        # halfspace_normal * allowed_point >= halfspace_dist
+        # line is defined by line_start + x * line_dir
+        # returns interval of x that is allowed
+        
+        # halfspace_normal . p >= halfspace_dist
+        # halfspace_normal . (line_start + x * line_dir) >= halfspace_dist
+        # halfspace_normal . line_start + x * halfspace_normal . line_dir >= halfspace_dist
+        # x * (halfspace_normal . line_dir) >= halfspace_dist - halfspace_normal . line_start
+        if halfspace_normal.dot(line_dir) > 0:
+            return ((halfspace_dist - halfspace_normal.dot(line_start)) / halfspace_normal.dot(line_dir), inf)
+        elif halfspace_normal.dot(line_dir) < 0:
+            return (-inf, (halfspace_dist - halfspace_normal.dot(line_start)) / halfspace_normal.dot(line_dir))
+        else: # line is parallel to halfspace boundary
+            if halfspace_normal.dot(line_start) >= halfspace_dist: # everything allowed
+                return (-inf, inf)
+            else: # nothing allowed
+                return (inf, -inf)
+    
+    def get_allowable_d2s_over_dt2_range(s, ds_over_dt):
+        res = bs.evaluate(s)
+        
+        # u = p + d2s/dt2 v
+        p = m * res['a'] * ds_over_dt**2 - w(res['p'], res['v'] * ds_over_dt)
+        v = m * res['v']
+        
+        #print p, v
+        
+        allowed = (-inf, inf)
+        for halfspace_normal, halfspace_dist in [
+            (numpy.array([1, 0]), -1),
+            (numpy.array([-1, 0]),-1),
+            (numpy.array([0, 1]), -1),
+            (numpy.array([0, -1]),-1),
+        ]:
+            this_allowed = line_halfspace_intersection(p, v, halfspace_normal, halfspace_dist)
+            #print this_allowed
+            allowed = max(allowed[0], this_allowed[0]), min(allowed[1], this_allowed[1])
+        return allowed
+    
+    range_is_valid = lambda (lo, hi): lo <= hi
+    
+    def find_maximum_ds_over_dt(s):
+        assert range_is_valid(get_allowable_d2s_over_dt2_range(s, 0))
+        a = 1
+        while range_is_valid(get_allowable_d2s_over_dt2_range(s, a)):
+            a *= 2
+        # a is invalid
+        # breakpoint is in (0, a]
+        breakpoint_range = 0, a
+        for i in xrange(20):
+            if range_is_valid(get_allowable_d2s_over_dt2_range(s, (breakpoint_range[0] + breakpoint_range[1])/2)):
+                breakpoint_range = (breakpoint_range[0] + breakpoint_range[1])/2, breakpoint_range[1]
+            else:
+                breakpoint_range = breakpoint_range[0], (breakpoint_range[0] + breakpoint_range[1])/2
+        #print breakpoint_range
+        return breakpoint_range[0]
+    
+    N = 1001
+    px = []
+    px1 = []
+    px2 = []
+    ds_over_dt = 0
+    for s, s2 in zip(numpy.linspace(0, 1, N)[:-1], numpy.linspace(0, 1, N)[1:]):
+        print s, ds_over_dt
+        px.append((s, ds_over_dt))
+        rng = get_allowable_d2s_over_dt2_range(s, ds_over_dt)
+        px1.append((s, rng[0]))
+        px2.append((s, rng[1]))
+        if not range_is_valid(rng): break
+        chosen = rng[1]
+        ds_over_dt = math.sqrt(ds_over_dt**2 + 2 * (s2 - s) * chosen)
+    
     pyplot.plot(*zip(*px))
-    import time
-    t = time.time() % 10 / 10
-    res = bs.evaluate(t)
-    pyplot.scatter(*zip(*points))
-    pyplot.scatter(*zip(*[res['p']]) + [80])
-    pyplot.arrow(*(list(res['p']) + list(.1*res['v'])))
-    pyplot.arrow(*(list(res['p']) + list(.003*res['a'])))
-
-fig = pyplot.figure()
-
-ani = animation.FuncAnimation(fig, animate, interval=25)
-
-pyplot.show()
+    pyplot.plot(*zip(*px1))
+    pyplot.plot(*zip(*px2))
+    px = [(x, find_maximum_ds_over_dt(x)) for x in numpy.linspace(0, 1, N)]
+    pyplot.plot(*zip(*px))
+    pyplot.show()
+    fdasfdsa
+    
+    px = [(x, numpy.linalg.norm(bs.evaluate(x)['v'])) for x in numpy.linspace(0, 1, N)]
+    pyplot.plot(*zip(*px))
+    
+    px = [(x, find_maximum_ds_over_dt(x)) for x in numpy.linspace(0, 1, N)]
+    pyplot.plot(*zip(*px))
+    
+    px = [(x, get_allowable_d2s_over_dt2_range(x, 0)[0]) for x in numpy.linspace(0, 1, N)]
+    pyplot.plot(*zip(*px))
+    px = [(x, get_allowable_d2s_over_dt2_range(x, 0)[1]) for x in numpy.linspace(0, 1, N)]
+    pyplot.plot(*zip(*px))
+    
+    px = [(x, get_allowable_d2s_over_dt2_range(x, find_maximum_ds_over_dt(x))[0]) for x in numpy.linspace(0, 1, N)]
+    pyplot.plot(*zip(*px))
+    px = [(x, get_allowable_d2s_over_dt2_range(x, find_maximum_ds_over_dt(x))[1]) for x in numpy.linspace(0, 1, N)]
+    pyplot.plot(*zip(*px))
+    
+    pyplot.show()
