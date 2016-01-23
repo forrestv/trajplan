@@ -184,50 +184,53 @@ else:
             s, ds_over_dt = advance((s, ds_over_dt), rng[0], ds)
     
     N = 1001
-    px = []
-    px1 = []
-    px2 = []
-    px3 = []
-    ds_over_dt = 0
-    for s, s2 in zip(numpy.linspace(0, 1, N)[:-1], numpy.linspace(0, 1, N)[1:]):
-        rng = get_allowable_d2s_over_dt2_range(s, ds_over_dt)
+    
+    if 1:
+        px = [(x, numpy.linalg.norm(bs.evaluate(x)['v'])) for x in numpy.linspace(0, 1, N)]
+        pyplot.plot(*zip(*px))
+        
+        px = [(x, find_maximum_ds_over_dt(x)) for x in numpy.linspace(0, 1, N)]
+        pyplot.plot(*zip(*px))
+        
+        px = [(x, get_allowable_d2s_over_dt2_range(x, 0)[0]) for x in numpy.linspace(0, 1, N)]
+        pyplot.plot(*zip(*px))
+        px = [(x, get_allowable_d2s_over_dt2_range(x, 0)[1]) for x in numpy.linspace(0, 1, N)]
+        pyplot.plot(*zip(*px))
+        
+        px = [(x, get_allowable_d2s_over_dt2_range(x, find_maximum_ds_over_dt(x))[0]) for x in numpy.linspace(0, 1, N)]
+        pyplot.plot(*zip(*px))
+        px = [(x, get_allowable_d2s_over_dt2_range(x, find_maximum_ds_over_dt(x))[1]) for x in numpy.linspace(0, 1, N)]
+        pyplot.plot(*zip(*px))
+        
+        pyplot.show()
+    else:
+        px = []
+        px1 = []
+        px2 = []
+        px3 = []
+        ds_over_dt = 0
+        s = 0
         ds = 1/(N-1)
-        print s, ds_over_dt, can_stop_from(advance((s, ds_over_dt), rng[1], ds), ds)
-        px.append((s, ds_over_dt))
-        px1.append((s, rng[0]))
-        px2.append((s, rng[1]))
-        if not range_is_valid(rng): break
-        if can_stop_from(advance((s, ds_over_dt), rng[1], ds), ds):
-            chosen = rng[1]
-        else:
-            assert can_stop_from(advance((s, ds_over_dt), rng[0], ds), ds)
-            chosen = rng[0]
-        px2.append((s, chosen))
-        _, ds_over_dt = advance((s, ds_over_dt), chosen, ds)
-    
-    pyplot.plot(*zip(*px))
-    pyplot.plot(*zip(*px1))
-    pyplot.plot(*zip(*px2))
-    pyplot.plot(*zip(*px3))
-    px = [(x, find_maximum_ds_over_dt(x)) for x in numpy.linspace(0, 1, N)]
-    pyplot.plot(*zip(*px))
-    pyplot.show()
-    fdasfdsa
-    
-    px = [(x, numpy.linalg.norm(bs.evaluate(x)['v'])) for x in numpy.linspace(0, 1, N)]
-    pyplot.plot(*zip(*px))
-    
-    px = [(x, find_maximum_ds_over_dt(x)) for x in numpy.linspace(0, 1, N)]
-    pyplot.plot(*zip(*px))
-    
-    px = [(x, get_allowable_d2s_over_dt2_range(x, 0)[0]) for x in numpy.linspace(0, 1, N)]
-    pyplot.plot(*zip(*px))
-    px = [(x, get_allowable_d2s_over_dt2_range(x, 0)[1]) for x in numpy.linspace(0, 1, N)]
-    pyplot.plot(*zip(*px))
-    
-    px = [(x, get_allowable_d2s_over_dt2_range(x, find_maximum_ds_over_dt(x))[0]) for x in numpy.linspace(0, 1, N)]
-    pyplot.plot(*zip(*px))
-    px = [(x, get_allowable_d2s_over_dt2_range(x, find_maximum_ds_over_dt(x))[1]) for x in numpy.linspace(0, 1, N)]
-    pyplot.plot(*zip(*px))
-    
-    pyplot.show()
+        while True:
+            if s != 0 and ds_over_dt == 0: break
+            rng = get_allowable_d2s_over_dt2_range(s, ds_over_dt)
+            print s, ds_over_dt, can_stop_from(advance((s, ds_over_dt), rng[1], ds), ds)
+            px.append((s, ds_over_dt))
+            px1.append((s, rng[0]))
+            px2.append((s, rng[1]))
+            if not range_is_valid(rng): break
+            if can_stop_from(advance((s, ds_over_dt), rng[1], ds), ds):
+                chosen = rng[1]
+            else:
+                assert can_stop_from(advance((s, ds_over_dt), rng[0], ds), ds)
+                chosen = rng[0]
+            px2.append((s, chosen))
+            s, ds_over_dt = advance((s, ds_over_dt), chosen, ds)
+        
+        pyplot.plot(*zip(*px))
+        pyplot.plot(*zip(*px1))
+        pyplot.plot(*zip(*px2))
+        pyplot.plot(*zip(*px3))
+        px = [(x, find_maximum_ds_over_dt(x)) for x in numpy.linspace(0, 1, N)]
+        pyplot.plot(*zip(*px))
+        pyplot.show()
