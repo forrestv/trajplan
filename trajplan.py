@@ -222,7 +222,7 @@ if 0:
     pyplot.plot(*zip(*[(x['t'], x['u'][1]) for x in result]))
     pyplot.show()
 else:
-    spline_sampled_points = [bs.evaluate(x)['p'] for x in numpy.linspace(0, 1, 1000)]
+    spline_sampled_points = [bs.evaluate(x)['p'] for x in numpy.linspace(0, 1, 100)]
     def animate(i):
         pyplot.cla()
         pyplot.gca().set_aspect('equal')
@@ -239,6 +239,6 @@ else:
 
     fig = pyplot.figure()
 
-    ani = animation.FuncAnimation(fig, animate, interval=25)
+    ani = animation.FuncAnimation(fig, animate, interval=1)
 
     pyplot.show()
