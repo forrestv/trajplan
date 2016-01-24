@@ -158,8 +158,8 @@ def can_stop_from((s_index, ds_over_dt)):
 start_time = time.time()
 
 ds_over_dt = 0
-d2s_over_dt2_values = []
-ds_over_dt_values = []
+d2s_over_dt2_values = [] # d2s_over_dt2_values[i] is defined as applying between ses[i] and ses[i+1]
+ds_over_dt_values = [] # d2s_over_dt2_values[i] is defined as applying at ses[i]
 for s_index in xrange(N-1):
     ds_over_dt_values.append(ds_over_dt)
     rng = get_allowable_d2s_over_dt2_range(s_index, ds_over_dt)
@@ -178,7 +178,7 @@ ds_over_dt_values.append(ds_over_dt)
 d2s_over_dt2_values.append(0)
 
 t = 0
-t_values = [t]
+t_values = [t] # t_values[i] is defined as applying at ses[i]
 for ds_over_dt1, ds_over_dt2 in zip(ds_over_dt_values[:-1], ds_over_dt_values[1:]):
     # circular integration..!
     # find new_t such that a circle goes through (s1, t) and (s2, new_t)
@@ -204,7 +204,7 @@ for s_index in xrange(N):
         s=ses[s_index],
         t=t,
         ds_over_dt=ds_over_dt,
-        d2s_over_dt2=d2s_over_dt2,
+        d2s_over_dt2=d2s_over_dt2, # distinct from the others (which are instantaneous), this quantity applies from this instant to the next
         p=p,
         v=v,
         a=a,
