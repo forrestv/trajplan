@@ -159,7 +159,7 @@ start_time = time.time()
 
 ds_over_dt = 0
 d2s_over_dt2_values = [] # d2s_over_dt2_values[i] is defined as applying between ses[i] and ses[i+1]
-ds_over_dt_values = [] # d2s_over_dt2_values[i] is defined as applying at ses[i]
+ds_over_dt_values = [] # ds_over_dt_values[i] is defined as applying at ses[i]
 for s_index in xrange(N-1):
     ds_over_dt_values.append(ds_over_dt)
     rng = get_allowable_d2s_over_dt2_range(s_index, ds_over_dt)
