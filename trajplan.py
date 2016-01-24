@@ -137,8 +137,8 @@ def advance((s, ds_over_dt), d2s_over_dt2, ds):
     #     limited to exactly 0 and we return the pseudoacceleration
     #     that was needed to achieve that
     if ds_over_dt**2 + 2 * ds * d2s_over_dt2 <= 0:
-        ds_over_dt = 0
         d2s_over_dt2 = -ds_over_dt**2 / 2 / ds
+        ds_over_dt = 0
     else:
         ds_over_dt = math.sqrt(ds_over_dt**2 + 2 * ds * d2s_over_dt2)
     return (s + ds, ds_over_dt), d2s_over_dt2
