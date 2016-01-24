@@ -135,7 +135,7 @@ def get_allowable_d2s_over_dt2_range(s_index, ds_over_dt):
         allowed = intersect_ranges(allowed, this_allowed)
     return allowed
 
-def advance((s_index, ds_over_dt), d2s_over_dt2, ds):
+def advance((s_index, ds_over_dt), d2s_over_dt2):
     # advance state over step of length ds with constant pseudoacceleration d2s_over_dt2
     # if pseudoacceleration would make our pseudospeed < 0, the pseudospeed is
     #     limited to exactly 0 and we return the pseudoacceleration
@@ -147,48 +147,46 @@ def advance((s_index, ds_over_dt), d2s_over_dt2, ds):
         ds_over_dt = math.sqrt(ds_over_dt**2 + 2 * ds * d2s_over_dt2)
     return (s_index + 1, ds_over_dt), d2s_over_dt2
 
-def can_stop_from((s_index, ds_over_dt), ds):
+def can_stop_from((s_index, ds_over_dt)):
     while True:
         if ds_over_dt == 0: return True
         if s_index == N-1: return False
         rng = get_allowable_d2s_over_dt2_range(s_index, ds_over_dt)
         if not range_is_valid(rng): return False
-        s_index, ds_over_dt = advance((s_index, ds_over_dt), rng[0], ds)[0]
+        s_index, ds_over_dt = advance((s_index, ds_over_dt), rng[0])[0]
 
 start_time = time.time()
 
 ds_over_dt = 0
 d2s_over_dt2_values = []
 ds_over_dt_values = []
-for s_index in xrange(N):
-    ds_over_dt_values.append((s_index, ds_over_dt))
-    print s_index, ds_over_dt,
-    if s_index != 0 and ds_over_dt == 0:
-        print
-        break
+for s_index in xrange(N-1):
+    ds_over_dt_values.append(ds_over_dt)
     rng = get_allowable_d2s_over_dt2_range(s_index, ds_over_dt)
-    can_stop = can_stop_from(advance((s_index, ds_over_dt), rng[1], ds)[0], ds)
-    print can_stop
+    can_stop = can_stop_from(advance((s_index, ds_over_dt), rng[1])[0])
     assert range_is_valid(rng)
     if can_stop:
         chosen = rng[1]
     else:
-        #assert can_stop_from(advance((s_index, ds_over_dt), rng[0], ds)[0], ds) # this should hold, but evaluating it is slow
+        #assert can_stop_from(advance((s_index, ds_over_dt), rng[0])[0]) # this should hold, but evaluating it is slow
         chosen = rng[0]
-    old_s_index = s_index
-    (s_index, ds_over_dt), chosen = advance((s_index, ds_over_dt), chosen, ds)
-    d2s_over_dt2_values.append((old_s_index, chosen))
+    (next_s_index, ds_over_dt), chosen = advance((s_index, ds_over_dt), chosen)
+    d2s_over_dt2_values.append(chosen)
+    print ses[s_index], ds_over_dt, can_stop, rng, chosen
+assert ds_over_dt == 0
+ds_over_dt_values.append(ds_over_dt)
+d2s_over_dt2_values.append(0)
 
 t = 0
-t_values = [(0, t)]
-for (s_index1, ds_over_dt1), (s_index2, ds_over_dt2) in zip(ds_over_dt_values[:-1], ds_over_dt_values[1:]):
+t_values = [t]
+for ds_over_dt1, ds_over_dt2 in zip(ds_over_dt_values[:-1], ds_over_dt_values[1:]):
     # circular integration..!
     # find new_t such that a circle that goes (s1, t) and (s2, new_t)
     # while respecting the slope conditions at each point.
     # avoids divide by zero that arises from standard integration.
     # consequences of inventing new math: unknown.
     t = t + ds * (1 - ds_over_dt1*ds_over_dt2 + math.sqrt((1+ds_over_dt1**2)*(1+ds_over_dt2**2)))/(ds_over_dt1+ds_over_dt2)
-    t_values.append((s_index2, t))
+    t_values.append(t)
 
 end_time = time.time()
 print 'planning took', (end_time - start_time)/1e-3, 'ms'
@@ -196,15 +194,9 @@ print 'planning took', (end_time - start_time)/1e-3, 'ms'
 result = []
 for s_index in xrange(N):
     speval = bs.evaluate(ses[s_index])
-    assert t_values[s_index][0] == s_index
-    t = t_values[s_index][1]
-    assert ds_over_dt_values[s_index][0] == s_index
-    ds_over_dt = ds_over_dt_values[s_index][1]
-    if s_index == N-1:
-        d2s_over_dt2 = 0
-    else:
-        assert d2s_over_dt2_values[s_index][0] == s_index
-        d2s_over_dt2 = d2s_over_dt2_values[s_index][1]
+    t = t_values[s_index]
+    ds_over_dt = ds_over_dt_values[s_index]
+    d2s_over_dt2 = d2s_over_dt2_values[s_index]
     p = speval['p']
     v = speval['v'] * ds_over_dt
     a = speval['a'] * ds_over_dt**2 + speval['v'] * d2s_over_dt2
