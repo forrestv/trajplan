@@ -31,6 +31,7 @@ class BSpline(object):
         
         n = self.degree
         c = [self.knots[i] for i in xrange(l-n+1, l+n+1)]
+        assert l-n >= 0
         d = [self.points[i] for i in xrange(l-n, l+1)]
         for k in xrange(n):
             d = [self.lerp(d[i], d[i+1], (x - c[i+k])/(c[i+n] - c[i+k]), 1/(c[i+n] - c[i+k])) for i in xrange(n-k)]
