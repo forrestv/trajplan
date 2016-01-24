@@ -2,6 +2,7 @@ from __future__ import division
 
 import bisect
 import math
+import time
 
 import numpy
 from matplotlib import pyplot, animation
@@ -155,6 +156,8 @@ def can_stop_from((s, ds_over_dt), ds):
 N = 1001
 ds = 1/(N-1)
 
+start_time = time.time()
+
 s = 0
 ds_over_dt = 0
 d2s_over_dt2_values = []
@@ -188,6 +191,9 @@ for (s1, ds_over_dt1), (s2, ds_over_dt2) in zip(ds_over_dt_values[:-1], ds_over_
     # consequences of inventing new math: unknown.
     t = t + (s2 - s1) * (1 - ds_over_dt1*ds_over_dt2 + math.sqrt((1+ds_over_dt1**2)*(1+ds_over_dt2**2)))/(ds_over_dt1+ds_over_dt2)
     t_values.append((s2, t))
+
+end_time = time.time()
+print 'planning took', (end_time - start_time)/1e-3, 'ms'
 
 s = 0
 result = []
@@ -228,7 +234,6 @@ else:
         pyplot.gca().set_aspect('equal')
         pyplot.plot(*zip(*spline_sampled_points))
         pyplot.scatter(*zip(*spline_control_points))
-        import time
         t = time.time() % result[-1]['t']
         i = min(xrange(N), key=lambda i: abs(result[i]['t'] - t))
         inst = result[i]
