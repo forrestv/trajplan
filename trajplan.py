@@ -148,6 +148,7 @@ def advance((s_index, ds_over_dt), d2s_over_dt2):
     return (s_index + 1, ds_over_dt), d2s_over_dt2
 
 def can_stop_from((s_index, ds_over_dt)):
+    assert s_index <= N-1
     while True:
         if ds_over_dt == 0: return True
         if s_index == N-1: return False
@@ -155,24 +156,60 @@ def can_stop_from((s_index, ds_over_dt)):
         if not range_is_valid(rng): return False
         s_index, ds_over_dt = advance((s_index, ds_over_dt), rng[0])[0]
 
+def can_accelerate((s_index, ds_over_dt)):
+    assert s_index <= N-1
+    rng = get_allowable_d2s_over_dt2_range(s_index, ds_over_dt)
+    assert range_is_valid(rng)
+    return can_stop_from(advance((s_index, ds_over_dt), rng[1])[0])
+
+def multiadvance_accelerating(state, count):
+    for i in xrange(count):
+        rng = get_allowable_d2s_over_dt2_range(*state)
+        assert range_is_valid(rng)
+        state = advance(state, rng[1])[0]
+    return state
+
+def multiadvance_decelerating(state, count):
+    for i in xrange(count):
+        rng = get_allowable_d2s_over_dt2_range(*state)
+        assert range_is_valid(rng)
+        state = advance(state, rng[0])[0]
+    return state
+
 start_time = time.time()
 
+s_index = 0
 ds_over_dt = 0
 d2s_over_dt2_values = [] # d2s_over_dt2_values[i] is defined as applying between ses[i] and ses[i+1]
 ds_over_dt_values = [] # ds_over_dt_values[i] is defined as applying at ses[i]
-for s_index in xrange(N-1):
-    ds_over_dt_values.append(ds_over_dt)
-    rng = get_allowable_d2s_over_dt2_range(s_index, ds_over_dt)
-    can_stop = can_stop_from(advance((s_index, ds_over_dt), rng[1])[0])
-    assert range_is_valid(rng)
-    if can_stop:
+assert can_accelerate((s_index, ds_over_dt))
+while True:
+    a = 1
+    while can_accelerate(multiadvance_accelerating((s_index, ds_over_dt), a)):
+        a *= 2
+        if s_index + a + 1 >= N:
+            a = N - 2 - s_index
+    breakpoint_range = a//2, a # lower has can_accelerate = True, higher has can_accelerate = False
+    while breakpoint_range[0] + 1 != breakpoint_range[1]:
+        mp = (breakpoint_range[0] + breakpoint_range[1]) // 2
+        if can_accelerate(multiadvance_accelerating((s_index, ds_over_dt), mp)):
+            breakpoint_range = mp, breakpoint_range[1]
+        else:
+            breakpoint_range = breakpoint_range[0], mp
+    for i in xrange(breakpoint_range[1]):
+        rng = get_allowable_d2s_over_dt2_range(s_index, ds_over_dt)
+        assert range_is_valid(rng)
         chosen = rng[1]
-    else:
-        #assert can_stop_from(advance((s_index, ds_over_dt), rng[0])[0]) # this should hold, but evaluating it is slow
+        ds_over_dt_values.append(ds_over_dt)
+        (s_index, ds_over_dt), chosen = advance((s_index, ds_over_dt), chosen)
+        d2s_over_dt2_values.append(chosen)
+    while s_index != N-1:
+        rng = get_allowable_d2s_over_dt2_range(s_index, ds_over_dt)
         chosen = rng[0]
-    (next_s_index, ds_over_dt), chosen = advance((s_index, ds_over_dt), chosen)
-    d2s_over_dt2_values.append(chosen)
-    print ses[s_index], ds_over_dt, can_stop, rng, chosen
+        ds_over_dt_values.append(ds_over_dt)
+        (s_index, ds_over_dt), chosen = advance((s_index, ds_over_dt), chosen)
+        d2s_over_dt2_values.append(chosen)
+    break
 assert ds_over_dt == 0
 ds_over_dt_values.append(ds_over_dt)
 d2s_over_dt2_values.append(0)
