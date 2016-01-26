@@ -103,6 +103,9 @@ u_constraints = [ # halfspace_normal, halfspace_dist; see line_halfspace_interse
 
 range_is_valid = lambda (lo, hi): lo <= hi
 intersect_ranges = lambda (lo1, hi1), (lo2, hi2): (max(lo1, lo2), min(hi1, hi2))
+in_range = lambda x, (lo, hi): lo <= x <= hi
+slightly_enlarge_range = lambda (lo, hi): (lo-(hi-lo)*1e-6, hi+(hi-lo)*1e-6)
+union_ranges = lambda (lo1, hi1), (lo2, hi2): (min(lo1, lo2), max(hi1, hi2))
 
 def line_halfspace_intersection(line_start, line_dir, halfspace_normal, halfspace_dist):
     # halfspace_normal * allowed_point >= halfspace_dist
@@ -200,19 +203,20 @@ def multiadvance_decelerating(state, count):
     return state
 
 def find_maximum_ds_over_dt(s_index):
-    assert range_is_valid(get_allowable_d2s_over_dt2_range(s_index, 0))
+    last_a = 0
+    assert range_is_valid(get_allowable_d2s_over_dt2_range(s_index, last_a))
     a = 1
     while range_is_valid(get_allowable_d2s_over_dt2_range(s_index, a)):
+        last_a = a
         a *= 2
     # a is invalid
-    # breakpoint is in (0, a]; binary search to find it
-    breakpoint_range = a//2, a
+    # breakpoint is in (last_a, a]; binary search to find it
+    breakpoint_range = last_a, a
     for i in xrange(20):
         if range_is_valid(get_allowable_d2s_over_dt2_range(s_index, (breakpoint_range[0] + breakpoint_range[1])/2)):
             breakpoint_range = (breakpoint_range[0] + breakpoint_range[1])/2, breakpoint_range[1]
         else:
             breakpoint_range = breakpoint_range[0], (breakpoint_range[0] + breakpoint_range[1])/2
-    #print breakpoint_range
     return breakpoint_range[0]
 
 if 0:
@@ -225,9 +229,7 @@ start_time = time.time()
 
 print 'forward'
 
-
 ds_over_dt = 0
-d2s_over_dt2_values = []
 ds_over_dt_values = []
 for s_index in xrange(N):
     rng = get_allowable_d2s_over_dt2_range(s_index, ds_over_dt)
@@ -241,14 +243,12 @@ for s_index in xrange(N):
     (_, ds_over_dt), chosen = advance((s_index, ds_over_dt), rng[1])
     assert _ == s_index + 1
     assert chosen == rng[1]
-    d2s_over_dt2_values.append(chosen)
 
 p1 = ds_over_dt_values
 
 print 'backward'
 
 ds_over_dt = 0
-d2s_over_dt2_values = []
 ds_over_dt_values = []
 for s_index in reversed(xrange(N)):
     rng = get_allowable_d2s_over_dt2_range(s_index, ds_over_dt)
@@ -262,87 +262,29 @@ for s_index in reversed(xrange(N)):
     (_, ds_over_dt), chosen = recede((s_index, ds_over_dt), rng[0])
     assert _ == s_index - 1
     assert chosen == rng[0]
-    d2s_over_dt2_values.append(chosen)
 
 p2 = ds_over_dt_values[::-1]
 ds_over_dt_values = map(min, p1, p2)
 d2s_over_dt2_values = map(get_d2s_over_dt2, ds_over_dt_values[:-1], ds_over_dt_values[1:])
 
-#pyplot.plot(*zip(*[(ses[s_index], find_maximum_ds_over_dt(s_index)) for s_index in xrange(N)]))
-#pyplot.plot(ses, p1)
-#pyplot.plot(ses, p2)
-#pyplot.plot(ses, ds_over_dt_values)
-pyplot.plot(ses[:-1], d2s_over_dt2_values)
-pyplot.plot(*zip(*[(ses[s_index], get_allowable_d2s_over_dt2_range(s_index, ds_over_dt_values[s_index])[0]) for s_index in xrange(N)]))
-pyplot.plot(*zip(*[(ses[s_index], get_allowable_d2s_over_dt2_range(s_index, ds_over_dt_values[s_index])[1]) for s_index in xrange(N)]))
-pyplot.show()
-sys.exit()
+for s_index, d2s_over_dt2 in enumerate(d2s_over_dt2_values):
+    # d2s_over_dt2 applies over the s_index to s_index+1 interval
+    left_rng = get_allowable_d2s_over_dt2_range(s_index, ds_over_dt_values[s_index])
+    right_rng = get_allowable_d2s_over_dt2_range(s_index+1, ds_over_dt_values[s_index+1])
+    assert in_range(d2s_over_dt2, slightly_enlarge_range(union_ranges(left_rng, right_rng)))
+
+if 0:
+    pyplot.plot(*zip(*[(ses[s_index], find_maximum_ds_over_dt(s_index)) for s_index in xrange(N)]))
+    #pyplot.plot(ses, p1)
+    #pyplot.plot(ses, p2)
+    pyplot.plot(ses, ds_over_dt_values)
+    pyplot.plot(numpy.array(ses[:-1]), d2s_over_dt2_values)
+    pyplot.plot(*zip(*[(ses[s_index], min(get_allowable_d2s_over_dt2_range(s_index, ds_over_dt_values[s_index])[0], get_allowable_d2s_over_dt2_range(s_index+1, ds_over_dt_values[s_index+1])[0])) for s_index in xrange(N-1)]))
+    pyplot.plot(*zip(*[(ses[s_index], max(get_allowable_d2s_over_dt2_range(s_index, ds_over_dt_values[s_index])[1], get_allowable_d2s_over_dt2_range(s_index+1, ds_over_dt_values[s_index+1])[1])) for s_index in xrange(N-1)]))
+    pyplot.show()
+    sys.exit()
 
 print 'done'
-
-fdsaf
-
-
-
-s_index = 0
-ds_over_dt = 0
-d2s_over_dt2_values = [] # d2s_over_dt2_values[i] is defined as applying between ses[i] and ses[i+1]
-ds_over_dt_values = [] # ds_over_dt_values[i] is defined as applying at ses[i]
-assert can_accelerate((s_index, ds_over_dt))
-while s_index < N-1:
-    print s_index
-    
-    if not can_accelerate((s_index, ds_over_dt)):
-        rng = get_allowable_d2s_over_dt2_range(s_index, ds_over_dt)
-        chosen = rng[0]
-        ds_over_dt_values.append(ds_over_dt)
-        (s_index, ds_over_dt), chosen = advance((s_index, ds_over_dt), chosen)
-        d2s_over_dt2_values.append(chosen)
-        continue
-    
-    a = 1
-    tmp = [(s_index, ds_over_dt)]
-    last_a = 0
-    while True:
-        while len(tmp) <= a+1: tmp.append(advance_accelerating(tmp[-1]))
-        if not can_stop_from(tmp[a+1]): # = not can_accelerate(tmp[a])
-            break
-        last_a = a
-        a *= 2
-        if s_index + a + 1 >= N:
-            a = N - 2 - s_index
-    
-    breakpoint_range = last_a, a # lower has can_accelerate = True, higher has can_accelerate = False
-    assert can_accelerate(tmp[breakpoint_range[0]])
-    assert not can_accelerate(tmp[breakpoint_range[1]])
-    
-    # bisection search for first state with can_accelerate = False
-    while breakpoint_range[0] + 1 != breakpoint_range[1]:
-        mp = (breakpoint_range[0] + breakpoint_range[1]) // 2
-        if can_stop_from(tmp[mp+1]): # = can_accelerate(tmp[mp])
-            breakpoint_range = mp, breakpoint_range[1]
-        else:
-            breakpoint_range = breakpoint_range[0], mp
-    assert can_accelerate(tmp[breakpoint_range[0]])
-    assert not can_accelerate(tmp[breakpoint_range[1]])
-    
-    for i in xrange(breakpoint_range[1]):
-        rng = get_allowable_d2s_over_dt2_range(s_index, ds_over_dt)
-        assert range_is_valid(rng)
-        chosen = rng[1]
-        ds_over_dt_values.append(ds_over_dt)
-        (s_index, ds_over_dt), chosen = advance((s_index, ds_over_dt), chosen)
-        d2s_over_dt2_values.append(chosen)
-    
-    for i in xrange(1):
-        rng = get_allowable_d2s_over_dt2_range(s_index, ds_over_dt)
-        chosen = rng[0]
-        ds_over_dt_values.append(ds_over_dt)
-        (s_index, ds_over_dt), chosen = advance((s_index, ds_over_dt), chosen)
-        d2s_over_dt2_values.append(chosen)
-assert ds_over_dt == 0
-ds_over_dt_values.append(ds_over_dt)
-d2s_over_dt2_values.append(0)
 
 t = 0
 t_values = [t] # t_values[i] is defined as applying at ses[i]
@@ -363,7 +305,7 @@ for s_index in xrange(N):
     speval = bs.evaluate(ses[s_index])
     t = t_values[s_index]
     ds_over_dt = ds_over_dt_values[s_index]
-    d2s_over_dt2 = d2s_over_dt2_values[s_index]
+    d2s_over_dt2 = d2s_over_dt2_values[s_index] if s_index < N-1 else 0
     p = speval['p']
     v = speval['v'] * ds_over_dt
     a = speval['a'] * ds_over_dt**2 + speval['v'] * d2s_over_dt2
