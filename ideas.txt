@@ -1,0 +1,4 @@
+forward pass, always accelerating as fast as possible, jumping down to max_speed when not possible to continue
+backwards pass, always accelerating (in reversed time, so decelerating), jumping down to 
+
+make it so that d2s/dt2 is limited by both the left and the right ranges
