@@ -207,6 +207,8 @@ while True:
             breakpoint_range = mp, breakpoint_range[1]
         else:
             breakpoint_range = breakpoint_range[0], mp
+    assert can_accelerate(tmp[breakpoint_range[0]])
+    assert not can_accelerate(tmp[breakpoint_range[1]])
     
     for i in xrange(breakpoint_range[1]):
         rng = get_allowable_d2s_over_dt2_range(s_index, ds_over_dt)
