@@ -3,6 +3,7 @@ from __future__ import division
 import bisect
 import math
 import time
+import sys
 
 import numpy
 from matplotlib import pyplot, animation
@@ -60,11 +61,13 @@ class BSpline(object):
         knots = [0] * KNOTDUP + map(float, numpy.linspace(0, 1, 2*DUP + (len(points) - (2*(degree-1))) + degree + 1 - 2 * KNOTDUP)) + [1] * KNOTDUP
         return cls(points, knots, degree, **kwargs)
 
+import random
+random = random.Random('helloo')
 spline_control_point_count = 20
 spline_control_points = [numpy.array([
     math.cos(i/spline_control_point_count*math.pi),
     math.sin(i/spline_control_point_count*math.pi),
-])+numpy.random.randn(2)*.04 for i in xrange(spline_control_point_count+1)]
+])+numpy.array([random.gauss(0, 1), random.gauss(0, 1)])*.04 for i in xrange(spline_control_point_count+1)]
 
 def mylerp(a, b, x, dxdt):
     if not isinstance(a, dict):
@@ -149,6 +152,21 @@ def advance((s_index, ds_over_dt), d2s_over_dt2):
         ds_over_dt = math.sqrt(ds_over_dt**2 + 2 * ds * d2s_over_dt2)
     return (s_index + 1, ds_over_dt), d2s_over_dt2
 
+def recede((s_index, ds_over_dt), d2s_over_dt2):
+    # advance state over step of length ds with constant pseudoacceleration d2s_over_dt2
+    # if pseudoacceleration would make our pseudospeed < 0, the pseudospeed is
+    #     limited to exactly 0 and we return the pseudoacceleration
+    #     that was needed to achieve that
+    if ds_over_dt**2 + 2 * -ds * d2s_over_dt2 <= 0:
+        d2s_over_dt2 = -ds_over_dt**2 / 2 / -ds
+        ds_over_dt = 0
+    else:
+        ds_over_dt = math.sqrt(ds_over_dt**2 + 2 * -ds * d2s_over_dt2)
+    return (s_index - 1, ds_over_dt), d2s_over_dt2
+
+def get_d2s_over_dt2(ds_over_dt1, ds_over_dt2):
+    return (ds_over_dt2**2 - ds_over_dt1**2) / (2 * ds)
+
 def can_stop_from(x):
     if x is None: return False
     (s_index, ds_over_dt) = x
@@ -181,7 +199,90 @@ def multiadvance_decelerating(state, count):
         state = advance(state, rng[0])[0]
     return state
 
+def find_maximum_ds_over_dt(s_index):
+    assert range_is_valid(get_allowable_d2s_over_dt2_range(s_index, 0))
+    a = 1
+    while range_is_valid(get_allowable_d2s_over_dt2_range(s_index, a)):
+        a *= 2
+    # a is invalid
+    # breakpoint is in (0, a]; binary search to find it
+    breakpoint_range = a//2, a
+    for i in xrange(20):
+        if range_is_valid(get_allowable_d2s_over_dt2_range(s_index, (breakpoint_range[0] + breakpoint_range[1])/2)):
+            breakpoint_range = (breakpoint_range[0] + breakpoint_range[1])/2, breakpoint_range[1]
+        else:
+            breakpoint_range = breakpoint_range[0], (breakpoint_range[0] + breakpoint_range[1])/2
+    #print breakpoint_range
+    return breakpoint_range[0]
+
+if 0:
+    pyplot.plot(*zip(*[(ses[s_index], find_maximum_ds_over_dt(s_index)) for s_index in xrange(N)]))
+    pyplot.plot(*zip(*[(ses[s_index], .1*get_allowable_d2s_over_dt2_range(s_index, find_maximum_ds_over_dt(s_index))[0]) for s_index in xrange(N)]))
+    pyplot.show()
+    sys.exit()
+
 start_time = time.time()
+
+print 'forward'
+
+
+ds_over_dt = 0
+d2s_over_dt2_values = []
+ds_over_dt_values = []
+for s_index in xrange(N):
+    rng = get_allowable_d2s_over_dt2_range(s_index, ds_over_dt)
+    if not range_is_valid(rng):
+        ds_over_dt = find_maximum_ds_over_dt(s_index)
+        rng = get_allowable_d2s_over_dt2_range(s_index, ds_over_dt)
+        print s_index, 'b'*10
+    else:
+        print s_index, 'a'
+    ds_over_dt_values.append(ds_over_dt)
+    (_, ds_over_dt), chosen = advance((s_index, ds_over_dt), rng[1])
+    assert _ == s_index + 1
+    assert chosen == rng[1]
+    d2s_over_dt2_values.append(chosen)
+
+p1 = ds_over_dt_values
+
+print 'backward'
+
+ds_over_dt = 0
+d2s_over_dt2_values = []
+ds_over_dt_values = []
+for s_index in reversed(xrange(N)):
+    rng = get_allowable_d2s_over_dt2_range(s_index, ds_over_dt)
+    if not range_is_valid(rng):
+        ds_over_dt = find_maximum_ds_over_dt(s_index)
+        rng = get_allowable_d2s_over_dt2_range(s_index, ds_over_dt)
+        print s_index, 'b'*10
+    else:
+        print s_index, 'a'
+    ds_over_dt_values.append(ds_over_dt)
+    (_, ds_over_dt), chosen = recede((s_index, ds_over_dt), rng[0])
+    assert _ == s_index - 1
+    assert chosen == rng[0]
+    d2s_over_dt2_values.append(chosen)
+
+p2 = ds_over_dt_values[::-1]
+ds_over_dt_values = map(min, p1, p2)
+d2s_over_dt2_values = map(get_d2s_over_dt2, ds_over_dt_values[:-1], ds_over_dt_values[1:])
+
+#pyplot.plot(*zip(*[(ses[s_index], find_maximum_ds_over_dt(s_index)) for s_index in xrange(N)]))
+#pyplot.plot(ses, p1)
+#pyplot.plot(ses, p2)
+#pyplot.plot(ses, ds_over_dt_values)
+pyplot.plot(ses[:-1], d2s_over_dt2_values)
+pyplot.plot(*zip(*[(ses[s_index], get_allowable_d2s_over_dt2_range(s_index, ds_over_dt_values[s_index])[0]) for s_index in xrange(N)]))
+pyplot.plot(*zip(*[(ses[s_index], get_allowable_d2s_over_dt2_range(s_index, ds_over_dt_values[s_index])[1]) for s_index in xrange(N)]))
+pyplot.show()
+sys.exit()
+
+print 'done'
+
+fdsaf
+
+
 
 s_index = 0
 ds_over_dt = 0
