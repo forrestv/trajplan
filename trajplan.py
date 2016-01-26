@@ -175,38 +175,6 @@ def recede((s_index, ds_over_dt), d2s_over_dt2):
 def get_d2s_over_dt2(ds_over_dt1, ds_over_dt2):
     return (ds_over_dt2**2 - ds_over_dt1**2) / (2 * ds)
 
-def can_stop_from(x):
-    if x is None: return False
-    (s_index, ds_over_dt) = x
-    assert s_index <= N-1
-    while True:
-        if ds_over_dt == 0: return True
-        if s_index == N-1: return False
-        rng = get_allowable_d2s_over_dt2_range(s_index, ds_over_dt)
-        if not range_is_valid(rng): return False
-        s_index, ds_over_dt = advance((s_index, ds_over_dt), rng[0])[0]
-
-def advance_accelerating(state):
-    if state is None: return None
-    rng = get_allowable_d2s_over_dt2_range(*state)
-    if not range_is_valid(rng): return None
-    return advance(state, rng[1])[0]
-
-def can_accelerate(state):
-    return can_stop_from(advance_accelerating(state))
-
-def multiadvance_accelerating(state, count):
-    for i in xrange(count):
-        state = advance_accelerating(state)
-    return state
-
-def multiadvance_decelerating(state, count):
-    for i in xrange(count):
-        rng = get_allowable_d2s_over_dt2_range(*state)
-        assert range_is_valid(rng)
-        state = advance(state, rng[0])[0]
-    return state
-
 def memoize(f):
     backing = {}
     def _(*args):
