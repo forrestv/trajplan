@@ -149,7 +149,9 @@ def advance((s_index, ds_over_dt), d2s_over_dt2):
         ds_over_dt = math.sqrt(ds_over_dt**2 + 2 * ds * d2s_over_dt2)
     return (s_index + 1, ds_over_dt), d2s_over_dt2
 
-def can_stop_from((s_index, ds_over_dt)):
+def can_stop_from(x):
+    if x is None: return False
+    (s_index, ds_over_dt) = x
     assert s_index <= N-1
     while True:
         if ds_over_dt == 0: return True
@@ -159,8 +161,9 @@ def can_stop_from((s_index, ds_over_dt)):
         s_index, ds_over_dt = advance((s_index, ds_over_dt), rng[0])[0]
 
 def advance_accelerating(state):
+    if state is None: return None
     rng = get_allowable_d2s_over_dt2_range(*state)
-    assert range_is_valid(rng)
+    if not range_is_valid(rng): return None
     return advance(state, rng[1])[0]
 
 def can_accelerate(state):
