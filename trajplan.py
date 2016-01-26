@@ -186,7 +186,7 @@ assert can_accelerate((s_index, ds_over_dt))
 while True:
     a = 1
     tmp = [(s_index, ds_over_dt)]
-    last_a = a
+    last_a = 0
     while True:
         while len(tmp) <= a+1: tmp.append(advance_accelerating(tmp[-1]))
         if not can_stop_from(tmp[a+1]): # = not can_accelerate(tmp[a])
