@@ -183,7 +183,17 @@ ds_over_dt = 0
 d2s_over_dt2_values = [] # d2s_over_dt2_values[i] is defined as applying between ses[i] and ses[i+1]
 ds_over_dt_values = [] # ds_over_dt_values[i] is defined as applying at ses[i]
 assert can_accelerate((s_index, ds_over_dt))
-while True:
+while s_index < N-1:
+    print s_index
+    
+    if not can_accelerate((s_index, ds_over_dt)):
+        rng = get_allowable_d2s_over_dt2_range(s_index, ds_over_dt)
+        chosen = rng[0]
+        ds_over_dt_values.append(ds_over_dt)
+        (s_index, ds_over_dt), chosen = advance((s_index, ds_over_dt), chosen)
+        d2s_over_dt2_values.append(chosen)
+        continue
+    
     a = 1
     tmp = [(s_index, ds_over_dt)]
     last_a = 0
@@ -218,14 +228,12 @@ while True:
         (s_index, ds_over_dt), chosen = advance((s_index, ds_over_dt), chosen)
         d2s_over_dt2_values.append(chosen)
     
-    while s_index != N-1:
+    for i in xrange(1):
         rng = get_allowable_d2s_over_dt2_range(s_index, ds_over_dt)
         chosen = rng[0]
         ds_over_dt_values.append(ds_over_dt)
         (s_index, ds_over_dt), chosen = advance((s_index, ds_over_dt), chosen)
         d2s_over_dt2_values.append(chosen)
-    
-    break
 assert ds_over_dt == 0
 ds_over_dt_values.append(ds_over_dt)
 d2s_over_dt2_values.append(0)
