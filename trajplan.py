@@ -236,9 +236,6 @@ for s_index in xrange(N):
     if not range_is_valid(rng):
         ds_over_dt = find_maximum_ds_over_dt(s_index)
         rng = get_allowable_d2s_over_dt2_range(s_index, ds_over_dt)
-        print s_index, 'b'*10
-    else:
-        print s_index, 'a'
     ds_over_dt_values.append(ds_over_dt)
     (_, ds_over_dt), chosen = advance((s_index, ds_over_dt), rng[1])
     assert _ == s_index + 1
@@ -255,9 +252,6 @@ for s_index in reversed(xrange(N)):
     if not range_is_valid(rng):
         ds_over_dt = find_maximum_ds_over_dt(s_index)
         rng = get_allowable_d2s_over_dt2_range(s_index, ds_over_dt)
-        print s_index, 'b'*10
-    else:
-        print s_index, 'a'
     ds_over_dt_values.append(ds_over_dt)
     (_, ds_over_dt), chosen = recede((s_index, ds_over_dt), rng[0])
     assert _ == s_index - 1
@@ -267,11 +261,12 @@ p2 = ds_over_dt_values[::-1]
 ds_over_dt_values = map(min, p1, p2)
 d2s_over_dt2_values = map(get_d2s_over_dt2, ds_over_dt_values[:-1], ds_over_dt_values[1:])
 
-for s_index, d2s_over_dt2 in enumerate(d2s_over_dt2_values):
-    # d2s_over_dt2 applies over the s_index to s_index+1 interval
-    left_rng = get_allowable_d2s_over_dt2_range(s_index, ds_over_dt_values[s_index])
-    right_rng = get_allowable_d2s_over_dt2_range(s_index+1, ds_over_dt_values[s_index+1])
-    assert in_range(d2s_over_dt2, slightly_enlarge_range(union_ranges(left_rng, right_rng)))
+if 0:
+    for s_index, d2s_over_dt2 in enumerate(d2s_over_dt2_values):
+        # d2s_over_dt2 applies over the s_index to s_index+1 interval
+        left_rng = get_allowable_d2s_over_dt2_range(s_index, ds_over_dt_values[s_index])
+        right_rng = get_allowable_d2s_over_dt2_range(s_index+1, ds_over_dt_values[s_index+1])
+        assert in_range(d2s_over_dt2, slightly_enlarge_range(union_ranges(left_rng, right_rng)))
 
 if 0:
     pyplot.plot(*zip(*[(ses[s_index], find_maximum_ds_over_dt(s_index)) for s_index in xrange(N)]))
