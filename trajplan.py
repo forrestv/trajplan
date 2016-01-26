@@ -62,7 +62,6 @@ class BSpline(object):
         return cls(points, knots, degree, **kwargs)
 
 import random
-random = random.Random('helloo')
 spline_control_point_count = 20
 spline_control_points = [numpy.array([
     math.cos(i/spline_control_point_count*math.pi),
@@ -129,9 +128,10 @@ def line_halfspace_intersection(line_start, line_dir, halfspace_normal, halfspac
 N = 1001
 ds = 1/(N-1)
 ses = [i/(N-1) for i in xrange(N)]
+ev = map(bs.evaluate, ses)
 
 def get_allowable_d2s_over_dt2_range(s_index, ds_over_dt):
-    res = bs.evaluate(ses[s_index])
+    res = ev[s_index]
     
     # u = line_start + d2s/dt2 line_dir
     line_start = m * res['a'] * ds_over_dt**2 - w(res['p'], res['v'] * ds_over_dt)
@@ -202,6 +202,17 @@ def multiadvance_decelerating(state, count):
         state = advance(state, rng[0])[0]
     return state
 
+def memoize(f):
+    backing = {}
+    def _(*args):
+        try:
+            return backing[args]
+        except KeyError:
+            backing[args] = f(*args)
+            return backing[args]
+    return _
+
+@memoize
 def find_maximum_ds_over_dt(s_index):
     last_a = 0
     assert range_is_valid(get_allowable_d2s_over_dt2_range(s_index, last_a))
@@ -240,7 +251,6 @@ for s_index in xrange(N):
     (_, ds_over_dt), chosen = advance((s_index, ds_over_dt), rng[1])
     assert _ == s_index + 1
     assert chosen == rng[1]
-
 p1 = ds_over_dt_values
 
 print 'backward'
@@ -256,8 +266,8 @@ for s_index in reversed(xrange(N)):
     (_, ds_over_dt), chosen = recede((s_index, ds_over_dt), rng[0])
     assert _ == s_index - 1
     assert chosen == rng[0]
-
 p2 = ds_over_dt_values[::-1]
+
 ds_over_dt_values = map(min, p1, p2)
 d2s_over_dt2_values = map(get_d2s_over_dt2, ds_over_dt_values[:-1], ds_over_dt_values[1:])
 
@@ -297,7 +307,7 @@ print 'planning took', (end_time - start_time)/1e-3, 'ms'
 
 result = []
 for s_index in xrange(N):
-    speval = bs.evaluate(ses[s_index])
+    speval = ev[s_index]
     t = t_values[s_index]
     ds_over_dt = ds_over_dt_values[s_index]
     d2s_over_dt2 = d2s_over_dt2_values[s_index] if s_index < N-1 else 0
