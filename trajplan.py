@@ -61,12 +61,17 @@ class BSpline(object):
         knots = [0] * KNOTDUP + map(float, numpy.linspace(0, 1, 2*DUP + (len(points) - (2*(degree-1))) + degree + 1 - 2 * KNOTDUP)) + [1] * KNOTDUP
         return cls(points, knots, degree, **kwargs)
 
-import random
-spline_control_point_count = 20
-spline_control_points = [numpy.array([
-    math.cos(i/spline_control_point_count*math.pi),
-    math.sin(i/spline_control_point_count*math.pi),
-])+numpy.array([random.gauss(0, 1), random.gauss(0, 1)])*.04 for i in xrange(spline_control_point_count+1)]
+if 1:
+    import random
+    spline_control_point_count = 20
+    spline_control_points = [numpy.array([
+        math.cos(i/spline_control_point_count*math.pi),
+        math.sin(i/spline_control_point_count*math.pi),
+    ])+numpy.array([random.gauss(0, 1), random.gauss(0, 1)])*.04 for i in xrange(spline_control_point_count+1)]
+else:
+    spline_control_point_count = 10
+    spline_control_points = [numpy.array([i/10, 0
+    ]) for i in xrange(spline_control_point_count+1)]
 
 def mylerp(a, b, x, dxdt):
     if not isinstance(a, dict):
