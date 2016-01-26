@@ -161,10 +161,7 @@ def advance((s_index, ds_over_dt), d2s_over_dt2):
     return (s_index + 1, ds_over_dt), d2s_over_dt2
 
 def recede((s_index, ds_over_dt), d2s_over_dt2):
-    # advance state over step of length ds with constant pseudoacceleration d2s_over_dt2
-    # if pseudoacceleration would make our pseudospeed < 0, the pseudospeed is
-    #     limited to exactly 0 and we return the pseudoacceleration
-    #     that was needed to achieve that
+    # advance(), but reversed in time
     if ds_over_dt**2 + 2 * -ds * d2s_over_dt2 <= 0:
         d2s_over_dt2 = -ds_over_dt**2 / 2 / -ds
         ds_over_dt = 0
