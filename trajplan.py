@@ -264,12 +264,7 @@ print 'done'
 t = 0
 t_values = [t] # t_values[i] is defined as applying at ses[i]
 for ds_over_dt1, ds_over_dt2 in zip(ds_over_dt_values[:-1], ds_over_dt_values[1:]):
-    # circular integration..!
-    # find new_t such that a circle goes through (s1, t) and (s2, new_t)
-    #   and has slope 1/ds_over_dt1 at s1 and 1/ds_over_dt2 at s2.
-    # avoids divide by zero that arises from standard integration.
-    # consequences of inventing new math: unknown.
-    t = t + ds * (1 - ds_over_dt1*ds_over_dt2 + math.sqrt((1+ds_over_dt1**2)*(1+ds_over_dt2**2)))/(ds_over_dt1+ds_over_dt2)
+    t += 2 * ds / (ds_over_dt1 + ds_over_dt2) # by assuming that d2s_over_dt2 is constant over the interval (as we do elsewhere), you get this
     t_values.append(t)
 
 end_time = time.time()
