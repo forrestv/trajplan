@@ -1,4 +1,4 @@
-from __future__ import division
+
 
 import bisect
 import math
@@ -15,7 +15,7 @@ class BSpline(object):
     def __init__(self, points, knots, degree, lerp=lambda a, b, x, dxdt: (1-x)*a + x*b):
         assert len(knots) == len(points) + degree + 1
         points = list(points)
-        knots = map(float, knots)
+        knots = list(map(float, knots))
         self.points = points
         self.knots = knots
         self.degree = degree
@@ -32,11 +32,11 @@ class BSpline(object):
         assert self.knots[l] <= x < self.knots[l+1]
         
         n = self.degree
-        c = [self.knots[i] for i in xrange(l-n+1, l+n+1)]
+        c = [self.knots[i] for i in range(l-n+1, l+n+1)]
         assert l-n >= 0
-        d = [self.points[i] for i in xrange(l-n, l+1)]
-        for k in xrange(n):
-            d = [self.lerp(d[i], d[i+1], (x - c[i+k])/(c[i+n] - c[i+k]), 1/(c[i+n] - c[i+k])) for i in xrange(n-k)]
+        d = [self.points[i] for i in range(l-n, l+1)]
+        for k in range(n):
+            d = [self.lerp(d[i], d[i+1], (x - c[i+k])/(c[i+n] - c[i+k]), 1/(c[i+n] - c[i+k])) for i in range(n-k)]
         assert len(d) == 1
         return d[0]
     
@@ -47,7 +47,7 @@ class BSpline(object):
         DUP = degree-1
         KNOTDUP = degree
         assert DUP >= 0
-        knots = [0] * KNOTDUP + map(float, numpy.linspace(0, 1, 2*DUP + len(points) + degree + 1 - 2 * KNOTDUP)) + [1] * KNOTDUP
+        knots = [0] * KNOTDUP + list(map(float, numpy.linspace(0, 1, 2*DUP + len(points) + degree + 1 - 2 * KNOTDUP))) + [1] * KNOTDUP
         points = [points[0]]*DUP + points + [points[-1]]*DUP
         return cls(points, knots, degree, **kwargs)
     
@@ -58,7 +58,7 @@ class BSpline(object):
         DUP = degree-1
         KNOTDUP = degree
         assert DUP >= 1
-        knots = [0] * KNOTDUP + map(float, numpy.linspace(0, 1, 2*DUP + (len(points) - (2*(degree-1))) + degree + 1 - 2 * KNOTDUP)) + [1] * KNOTDUP
+        knots = [0] * KNOTDUP + list(map(float, numpy.linspace(0, 1, 2*DUP + (len(points) - (2*(degree-1))) + degree + 1 - 2 * KNOTDUP))) + [1] * KNOTDUP
         return cls(points, knots, degree, **kwargs)
 
 if 1:
@@ -67,11 +67,11 @@ if 1:
     spline_control_points = [numpy.array([
         math.cos(i/spline_control_point_count*math.pi),
         math.sin(i/spline_control_point_count*math.pi),
-    ])+numpy.array([random.gauss(0, 1), random.gauss(0, 1)])*.04 for i in xrange(spline_control_point_count+1)]
+    ])+numpy.array([random.gauss(0, 1), random.gauss(0, 1)])*.04 for i in range(spline_control_point_count+1)]
 else:
     spline_control_point_count = 10
     spline_control_points = [numpy.array([i/10, 0
-    ]) for i in xrange(spline_control_point_count+1)]
+    ]) for i in range(spline_control_point_count+1)]
 
 def mylerp(a, b, x, dxdt):
     if not isinstance(a, dict):
@@ -105,10 +105,10 @@ u_constraints = [ # halfspace_normal, halfspace_dist; see line_halfspace_interse
     (numpy.array([0, -1]),-1),
 ]
 
-range_is_valid = lambda (lo, hi): lo <= hi
+range_is_valid = lambda lo_hi: lo_hi[0] <= lo_hi[1]
 intersect_ranges = lambda (lo1, hi1), (lo2, hi2): (max(lo1, lo2), min(hi1, hi2))
 in_range = lambda x, (lo, hi): lo <= x <= hi
-slightly_enlarge_range = lambda (lo, hi): (lo-(hi-lo)*1e-6, hi+(hi-lo)*1e-6)
+slightly_enlarge_range = lambda lo_hi1: (lo_hi1[0]-(lo_hi1[1]-lo_hi1[0])*1e-6, lo_hi1[1]+(lo_hi1[1]-lo_hi1[0])*1e-6)
 union_ranges = lambda (lo1, hi1), (lo2, hi2): (min(lo1, lo2), max(hi1, hi2))
 
 def line_halfspace_intersection(line_start, line_dir, halfspace_normal, halfspace_dist):
@@ -132,8 +132,8 @@ def line_halfspace_intersection(line_start, line_dir, halfspace_normal, halfspac
 
 N = 1001
 ds = 1/(N-1)
-ses = [i/(N-1) for i in xrange(N)]
-ev = map(bs.evaluate, ses)
+ses = [i/(N-1) for i in range(N)]
+ev = list(map(bs.evaluate, ses))
 
 def get_allowable_d2s_over_dt2_range(s_index, ds_over_dt):
     res = ev[s_index]
@@ -148,11 +148,12 @@ def get_allowable_d2s_over_dt2_range(s_index, ds_over_dt):
         allowed = intersect_ranges(allowed, this_allowed)
     return allowed
 
-def advance((s_index, ds_over_dt), d2s_over_dt2):
+def advance(xxx_todo_changeme, d2s_over_dt2):
     # advance state over step of length ds with constant pseudoacceleration d2s_over_dt2
     # if pseudoacceleration would make our pseudospeed < 0, the pseudospeed is
     #     limited to exactly 0 and we return the pseudoacceleration
     #     that was needed to achieve that
+    (s_index, ds_over_dt) = xxx_todo_changeme
     if ds_over_dt**2 + 2 * ds * d2s_over_dt2 <= 0:
         d2s_over_dt2 = -ds_over_dt**2 / 2 / ds
         ds_over_dt = 0
@@ -160,8 +161,9 @@ def advance((s_index, ds_over_dt), d2s_over_dt2):
         ds_over_dt = math.sqrt(ds_over_dt**2 + 2 * ds * d2s_over_dt2)
     return (s_index + 1, ds_over_dt), d2s_over_dt2
 
-def recede((s_index, ds_over_dt), d2s_over_dt2):
+def recede(xxx_todo_changeme2, d2s_over_dt2):
     # advance(), but reversed in time
+    (s_index, ds_over_dt) = xxx_todo_changeme2
     if ds_over_dt**2 + 2 * -ds * d2s_over_dt2 <= 0:
         d2s_over_dt2 = -ds_over_dt**2 / 2 / -ds
         ds_over_dt = 0
@@ -193,7 +195,7 @@ def find_maximum_ds_over_dt(s_index):
     # a is invalid
     # breakpoint is in (last_a, a]; binary search to find it
     breakpoint_range = last_a, a
-    for i in xrange(20):
+    for i in range(20):
         if range_is_valid(get_allowable_d2s_over_dt2_range(s_index, (breakpoint_range[0] + breakpoint_range[1])/2)):
             breakpoint_range = (breakpoint_range[0] + breakpoint_range[1])/2, breakpoint_range[1]
         else:
@@ -201,18 +203,18 @@ def find_maximum_ds_over_dt(s_index):
     return breakpoint_range[0]
 
 if 0:
-    pyplot.plot(*zip(*[(ses[s_index], find_maximum_ds_over_dt(s_index)) for s_index in xrange(N)]))
-    pyplot.plot(*zip(*[(ses[s_index], .1*get_allowable_d2s_over_dt2_range(s_index, find_maximum_ds_over_dt(s_index))[0]) for s_index in xrange(N)]))
+    pyplot.plot(*list(zip(*[(ses[s_index], find_maximum_ds_over_dt(s_index)) for s_index in range(N)])))
+    pyplot.plot(*list(zip(*[(ses[s_index], .1*get_allowable_d2s_over_dt2_range(s_index, find_maximum_ds_over_dt(s_index))[0]) for s_index in range(N)])))
     pyplot.show()
     sys.exit()
 
 start_time = time.time()
 
-print 'forward'
+print('forward')
 
 ds_over_dt = 0
 ds_over_dt_values = []
-for s_index in xrange(N):
+for s_index in range(N):
     rng = get_allowable_d2s_over_dt2_range(s_index, ds_over_dt)
     if not range_is_valid(rng):
         ds_over_dt = find_maximum_ds_over_dt(s_index)
@@ -223,11 +225,11 @@ for s_index in xrange(N):
     assert chosen == rng[1]
 p1 = ds_over_dt_values
 
-print 'backward'
+print('backward')
 
 ds_over_dt = 0
 ds_over_dt_values = []
-for s_index in reversed(xrange(N)):
+for s_index in reversed(range(N)):
     rng = get_allowable_d2s_over_dt2_range(s_index, ds_over_dt)
     if not range_is_valid(rng):
         ds_over_dt = find_maximum_ds_over_dt(s_index)
@@ -238,8 +240,8 @@ for s_index in reversed(xrange(N)):
     assert chosen == rng[0]
 p2 = ds_over_dt_values[::-1]
 
-ds_over_dt_values = map(min, p1, p2)
-d2s_over_dt2_values = map(get_d2s_over_dt2, ds_over_dt_values[:-1], ds_over_dt_values[1:])
+ds_over_dt_values = list(map(min, p1, p2))
+d2s_over_dt2_values = list(map(get_d2s_over_dt2, ds_over_dt_values[:-1], ds_over_dt_values[1:]))
 
 if 0:
     for s_index, d2s_over_dt2 in enumerate(d2s_over_dt2_values):
@@ -249,17 +251,17 @@ if 0:
         assert in_range(d2s_over_dt2, slightly_enlarge_range(union_ranges(left_rng, right_rng)))
 
 if 0:
-    pyplot.plot(*zip(*[(ses[s_index], find_maximum_ds_over_dt(s_index)) for s_index in xrange(N)]))
+    pyplot.plot(*list(zip(*[(ses[s_index], find_maximum_ds_over_dt(s_index)) for s_index in range(N)])))
     #pyplot.plot(ses, p1)
     #pyplot.plot(ses, p2)
     pyplot.plot(ses, ds_over_dt_values)
     pyplot.plot(numpy.array(ses[:-1]), d2s_over_dt2_values)
-    pyplot.plot(*zip(*[(ses[s_index], min(get_allowable_d2s_over_dt2_range(s_index, ds_over_dt_values[s_index])[0], get_allowable_d2s_over_dt2_range(s_index+1, ds_over_dt_values[s_index+1])[0])) for s_index in xrange(N-1)]))
-    pyplot.plot(*zip(*[(ses[s_index], max(get_allowable_d2s_over_dt2_range(s_index, ds_over_dt_values[s_index])[1], get_allowable_d2s_over_dt2_range(s_index+1, ds_over_dt_values[s_index+1])[1])) for s_index in xrange(N-1)]))
+    pyplot.plot(*list(zip(*[(ses[s_index], min(get_allowable_d2s_over_dt2_range(s_index, ds_over_dt_values[s_index])[0], get_allowable_d2s_over_dt2_range(s_index+1, ds_over_dt_values[s_index+1])[0])) for s_index in range(N-1)])))
+    pyplot.plot(*list(zip(*[(ses[s_index], max(get_allowable_d2s_over_dt2_range(s_index, ds_over_dt_values[s_index])[1], get_allowable_d2s_over_dt2_range(s_index+1, ds_over_dt_values[s_index+1])[1])) for s_index in range(N-1)])))
     pyplot.show()
     sys.exit()
 
-print 'done'
+print('done')
 
 t = 0
 t_values = [t] # t_values[i] is defined as applying at ses[i]
@@ -268,10 +270,10 @@ for ds_over_dt1, ds_over_dt2 in zip(ds_over_dt_values[:-1], ds_over_dt_values[1:
     t_values.append(t)
 
 end_time = time.time()
-print 'planning took', (end_time - start_time)/1e-3, 'ms'
+print('planning took', (end_time - start_time)/1e-3, 'ms')
 
 result = []
-for s_index in xrange(N):
+for s_index in range(N):
     speval = ev[s_index]
     t = t_values[s_index]
     ds_over_dt = ds_over_dt_values[s_index]
@@ -291,23 +293,23 @@ for s_index in xrange(N):
     ))
 
 if 0:
-    pyplot.plot(*zip(*[(x['t'], x['u'][0]) for x in result]))
-    pyplot.plot(*zip(*[(x['t'], x['u'][1]) for x in result]))
+    pyplot.plot(*list(zip(*[(x['t'], x['u'][0]) for x in result])))
+    pyplot.plot(*list(zip(*[(x['t'], x['u'][1]) for x in result])))
     pyplot.show()
 else:
     spline_sampled_points = [bs.evaluate(x)['p'] for x in numpy.linspace(0, 1, 100)]
     def animate(i):
         pyplot.cla()
         pyplot.gca().set_aspect('equal')
-        pyplot.plot(*zip(*spline_sampled_points))
-        pyplot.scatter(*zip(*spline_control_points))
+        pyplot.plot(*list(zip(*spline_sampled_points)))
+        pyplot.scatter(*list(zip(*spline_control_points)))
         t = time.time() % result[-1]['t']
-        i = min(xrange(N), key=lambda i: abs(result[i]['t'] - t))
+        i = min(range(N), key=lambda i: abs(result[i]['t'] - t))
         inst = result[i]
-        pyplot.scatter(*zip(*[inst['p']]) + [80])
+        pyplot.scatter(*list(zip(*[inst['p']])) + [80])
         #pyplot.arrow(*(list(inst['p']) + list(.1*inst['v'])))
         pyplot.arrow(*(list(inst['p']) + list(.1*inst['u'])))
-        pyplot.plot(*zip(*[inst['p'] + .1*numpy.array(x) for x in [(-1, -1), (-1, 1), (1, 1), (1, -1), (-1, -1)]]))
+        pyplot.plot(*list(zip(*[inst['p'] + .1*numpy.array(x) for x in [(-1, -1), (-1, 1), (1, 1), (1, -1), (-1, -1)]])))
 
     fig = pyplot.figure()
 
