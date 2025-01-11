@@ -105,11 +105,11 @@ u_constraints = [ # halfspace_normal, halfspace_dist; see line_halfspace_interse
     (numpy.array([0, -1]),-1),
 ]
 
-range_is_valid = lambda lo_hi: lo_hi[0] <= lo_hi[1]
-intersect_ranges = lambda (lo1, hi1), (lo2, hi2): (max(lo1, lo2), min(hi1, hi2))
-in_range = lambda x, (lo, hi): lo <= x <= hi
-slightly_enlarge_range = lambda lo_hi1: (lo_hi1[0]-(lo_hi1[1]-lo_hi1[0])*1e-6, lo_hi1[1]+(lo_hi1[1]-lo_hi1[0])*1e-6)
-union_ranges = lambda (lo1, hi1), (lo2, hi2): (min(lo1, lo2), max(hi1, hi2))
+range_is_valid = lambda r: r[0] <= r[1]
+intersect_ranges = lambda r1, r2: (max(r1[0], r2[0]), min(r1[1], r2[1]))
+in_range = lambda x, r: r[0] <= x <= r[1]
+slightly_enlarge_range = lambda r: (r[0]-(r[1]-r[0])*1e-6, r[1]+(r[1]-r[0])*1e-6)
+union_ranges = lambda r1, r2: (min(r1[0], r2[0]), max(r1[1], r2[1]))
 
 def line_halfspace_intersection(line_start, line_dir, halfspace_normal, halfspace_dist):
     # halfspace_normal * allowed_point >= halfspace_dist
